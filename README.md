@@ -54,3 +54,26 @@ Per sviluppo locale puoi definire le variabili nello scheme di Xcode (Run > Argu
 - `AiFrigoHome/Views/RecipeSuggestionView.swift`: suggerimenti AI.
 - `AiFrigoHome/Views/ProfileSettingsView.swift`: impostazioni famiglia/dieta.
 - `AiFrigoHome/Views/BarcodeScannerView.swift`: scanner barcode.
+
+## Versione Expo (test su iPhone con Expo Go)
+È stata aggiunta anche una versione React Native/Expo in `expo-app/` per test rapido su iPhone.
+
+### Avvio rapido
+1. Installa dipendenze:
+   - `cd expo-app && npm install`
+2. (Opzionale) crea `.env` in `expo-app/` con:
+   - `EXPO_PUBLIC_AI_API_KEY=...`
+   - `EXPO_PUBLIC_AI_BASE_URL=https://api.openai.com/v1`
+   - `EXPO_PUBLIC_AI_MODEL=gpt-4o-mini`
+3. Avvia:
+   - `npm run start`
+4. Apri l'app **Expo Go** su iPhone e scansiona il QR.
+
+### Feature incluse nella versione Expo
+- Lista alimenti con persistenza locale (`AsyncStorage`).
+- Profilo famiglia/dieta con persistenza locale.
+- Scanner barcode via `expo-camera`.
+- Notifiche locali scadenza via `expo-notifications`.
+- Suggerimenti AI tramite endpoint compatibile OpenAI.
+
+> Nota: la sync CloudKit è disponibile nella versione SwiftUI nativa; nella versione Expo il focus è test rapido su iPhone tramite Expo Go.

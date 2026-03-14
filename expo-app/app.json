@@ -1,0 +1,21 @@
+{
+  "expo": {
+    "name": "AiFrigoHome",
+    "slug": "aifrigohome",
+    "version": "1.0.0",
+    "orientation": "portrait",
+    "scheme": "aifrigohome",
+    "userInterfaceStyle": "automatic",
+    "ios": {
+      "supportsTablet": true,
+      "bundleIdentifier": "com.aifrigohome.app",
+      "infoPlist": {
+        "NSCameraUsageDescription": "Usiamo la fotocamera per scansionare i barcode degli alimenti."
+      }
+    },
+    "plugins": ["expo-router", "expo-notifications"],
+    "experiments": {
+      "typedRoutes": true
+    }
+  }
+}
