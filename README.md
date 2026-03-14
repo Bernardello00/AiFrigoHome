@@ -1,28 +1,26 @@
-# AiFrigoHome Web
+# AiFrigoHome Dashboard Web
 
-Nuova versione **web app responsive** (desktop + mobile) ricreata da zero.
+Web app responsive (desktop + mobile) per gestire frigorifero, budget spesa e suggerimenti ricette.
 
-## Funzionalità
-- Gestione alimenti (aggiunta/rimozione, quantità, scadenza, barcode opzionale).
-- Evidenza alimenti in scadenza / scaduti.
+## Cosa include
+- Dashboard KPI (totale alimenti, in scadenza, scaduti, budget residuo).
+- Gestione alimenti: aggiunta/rimozione, quantità, data scadenza, barcode opzionale.
+- Budget mensile e tracking spese con barra di avanzamento.
 - Profilo famiglia/dieta/allergie.
-- Suggerimenti ricette AI basati su ingredienti e profilo.
-- Notifiche browser per alimenti in scadenza (se abilitate).
-- Persistenza locale con `localStorage`.
+- Supermercati preferiti con suggerimenti offerte/ingredienti mancanti.
+- Consigli ricette AI + fallback locale se API key non configurata.
+- Persistenza locale (`localStorage`) e notifiche browser per scadenze imminenti.
 
 ## Avvio
-Apri `index.html` direttamente nel browser oppure avvia un server statico:
-
 ```bash
 python3 -m http.server 5173
 ```
-
-Poi visita `http://localhost:5173`.
+Poi apri `http://localhost:5173`.
 
 ## Configurazione AI (opzionale)
-Nel pannello **Impostazioni AI** puoi impostare:
+Nel pannello **Impostazioni AI**:
 - API Key
-- Base URL (default: `https://api.openai.com/v1`)
-- Modello (default: `gpt-4o-mini`)
+- Base URL (default `https://api.openai.com/v1`)
+- Modello (default `gpt-4o-mini`)
 
-Se non configurata, l'app mostra un suggerimento locale di fallback.
+Senza API key, l'app fornisce consigli locali di base.

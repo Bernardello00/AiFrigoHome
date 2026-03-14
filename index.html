@@ -3,85 +3,120 @@
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>AiFrigoHome Web</title>
+    <title>AiFrigoHome Dashboard</title>
     <link rel="stylesheet" href="styles.css" />
   </head>
   <body>
     <header class="topbar">
-      <h1>AiFrigoHome</h1>
-      <button id="notifyBtn" class="secondary">Abilita notifiche</button>
+      <div>
+        <h1>AiFrigoHome</h1>
+        <p class="subtitle">Dashboard frigo, budget e ricette smart</p>
+      </div>
+      <div class="topbar-actions">
+        <button id="notifyBtn" class="secondary">Abilita notifiche</button>
+      </div>
     </header>
 
-    <main class="layout">
-      <section class="card">
+    <main class="dashboard">
+      <section class="kpi-grid">
+        <article class="kpi-card">
+          <p>Alimenti totali</p>
+          <strong id="kpiItems">0</strong>
+        </article>
+        <article class="kpi-card warning">
+          <p>In scadenza (48h)</p>
+          <strong id="kpiExpiring">0</strong>
+        </article>
+        <article class="kpi-card danger">
+          <p>Scaduti</p>
+          <strong id="kpiExpired">0</strong>
+        </article>
+        <article class="kpi-card">
+          <p>Budget residuo</p>
+          <strong id="kpiBudget">€0.00</strong>
+        </article>
+      </section>
+
+      <section class="panel span-2">
+        <div class="panel-header">
+          <h2>Budget e spesa</h2>
+        </div>
+        <form id="budgetForm" class="form-grid compact">
+          <label>
+            Budget mensile (€)
+            <input id="monthlyBudget" type="number" min="0" step="0.01" placeholder="Es. 350" required />
+          </label>
+          <label>
+            Spesa registrata (€)
+            <input id="spentAmount" type="number" min="0" step="0.01" placeholder="Es. 46.20" required />
+          </label>
+          <button type="submit">Aggiungi spesa</button>
+          <button type="button" id="resetSpentBtn" class="secondary">Azzera spese</button>
+        </form>
+        <div class="budget-progress-wrap">
+          <div class="budget-progress" id="budgetBar"></div>
+        </div>
+        <p id="budgetInfo" class="muted">Imposta il budget per iniziare.</p>
+      </section>
+
+      <section class="panel">
         <h2>Aggiungi alimento</h2>
-        <form id="itemForm" class="form-grid">
-          <label>
-            Nome
-            <input id="name" required placeholder="Es. Latte" />
-          </label>
-          <label>
-            Quantità
-            <input id="quantity" required placeholder="Es. 1L" />
-          </label>
-          <label>
-            Scadenza
-            <input id="expiry" type="date" required />
-          </label>
-          <label>
-            Barcode (opzionale)
-            <input id="barcode" placeholder="EAN/UPC" />
-          </label>
-          <button type="submit">Salva alimento</button>
+        <form id="itemForm" class="form-grid compact">
+          <label>Nome<input id="name" required placeholder="Es. Latte" /></label>
+          <label>Quantità<input id="quantity" required placeholder="Es. 1L" /></label>
+          <label>Scadenza<input id="expiry" type="date" required /></label>
+          <label>Barcode (opz.)<input id="barcode" placeholder="EAN/UPC" /></label>
+          <button type="submit" class="full">Salva alimento</button>
         </form>
       </section>
 
-      <section class="card">
-        <h2>Frigorifero</h2>
+      <section class="panel span-2">
+        <div class="panel-header">
+          <h2>Frigorifero</h2>
+        </div>
         <ul id="itemsList" class="list"></ul>
       </section>
 
-      <section class="card">
-        <h2>Profilo famiglia e dieta</h2>
-        <form id="profileForm" class="form-grid">
-          <label>
-            Componenti famiglia
-            <input id="members" placeholder="Es. 2 adulti, 1 bambino" />
-          </label>
-          <label>
-            Stile alimentare
-            <input id="diet" placeholder="Es. Mediterranea" />
-          </label>
-          <label class="full">
-            Allergie / intolleranze
-            <textarea id="allergies" rows="3" placeholder="Es. Lattosio, arachidi"></textarea>
-          </label>
-          <button type="submit">Salva profilo</button>
+      <section class="panel">
+        <h2>Profilo famiglia</h2>
+        <form id="profileForm" class="form-grid compact">
+          <label>Componenti<input id="members" placeholder="Es. 2 adulti, 1 bambino" /></label>
+          <label>Stile alimentare<input id="diet" placeholder="Es. Mediterranea" /></label>
+          <label class="full">Allergie<textarea id="allergies" rows="3" placeholder="Es. Lattosio"></textarea></label>
+          <button type="submit" class="full">Salva profilo</button>
         </form>
       </section>
 
-      <section class="card">
-        <h2>Suggerimento ricette AI</h2>
-        <button id="aiBtn">Genera suggerimento</button>
+      <section class="panel">
+        <h2>Supermercati preferiti</h2>
+        <form id="marketForm" class="market-form">
+          <input id="marketInput" placeholder="Es. Esselunga" />
+          <button type="submit">Aggiungi</button>
+        </form>
+        <ul id="marketsList" class="chips"></ul>
+      </section>
+
+      <section class="panel span-2">
+        <h2>Offerte e ingredienti suggeriti</h2>
+        <p class="muted">Suggerimenti rapidi in base ai supermercati preferiti e agli ingredienti mancanti per completare le ricette.</p>
+        <ul id="offersList" class="list"></ul>
+      </section>
+
+      <section class="panel span-2">
+        <div class="panel-header">
+          <h2>Consigli ricette AI</h2>
+          <button id="aiBtn">Genera consigli</button>
+        </div>
         <pre id="aiOutput" class="output"></pre>
       </section>
 
-      <section class="card">
+      <section class="panel span-2">
         <h2>Impostazioni AI</h2>
-        <form id="aiForm" class="form-grid">
-          <label class="full">
-            API Key
-            <input id="aiKey" type="password" placeholder="sk-..." />
-          </label>
-          <label>
-            Base URL
-            <input id="aiBase" placeholder="https://api.openai.com/v1" />
-          </label>
-          <label>
-            Modello
-            <input id="aiModel" placeholder="gpt-4o-mini" />
-          </label>
-          <button type="submit">Salva impostazioni AI</button>
+        <form id="aiForm" class="form-grid compact">
+          <label class="full">API Key<input id="aiKey" type="password" placeholder="sk-..." /></label>
+          <label>Base URL<input id="aiBase" placeholder="https://api.openai.com/v1" /></label>
+          <label>Modello<input id="aiModel" placeholder="gpt-4o-mini" /></label>
+          <button type="submit" class="full">Salva impostazioni AI</button>
         </form>
       </section>
     </main>
