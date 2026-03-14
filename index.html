@@ -1,0 +1,91 @@
+<!doctype html>
+<html lang="it">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>AiFrigoHome Web</title>
+    <link rel="stylesheet" href="styles.css" />
+  </head>
+  <body>
+    <header class="topbar">
+      <h1>AiFrigoHome</h1>
+      <button id="notifyBtn" class="secondary">Abilita notifiche</button>
+    </header>
+
+    <main class="layout">
+      <section class="card">
+        <h2>Aggiungi alimento</h2>
+        <form id="itemForm" class="form-grid">
+          <label>
+            Nome
+            <input id="name" required placeholder="Es. Latte" />
+          </label>
+          <label>
+            Quantità
+            <input id="quantity" required placeholder="Es. 1L" />
+          </label>
+          <label>
+            Scadenza
+            <input id="expiry" type="date" required />
+          </label>
+          <label>
+            Barcode (opzionale)
+            <input id="barcode" placeholder="EAN/UPC" />
+          </label>
+          <button type="submit">Salva alimento</button>
+        </form>
+      </section>
+
+      <section class="card">
+        <h2>Frigorifero</h2>
+        <ul id="itemsList" class="list"></ul>
+      </section>
+
+      <section class="card">
+        <h2>Profilo famiglia e dieta</h2>
+        <form id="profileForm" class="form-grid">
+          <label>
+            Componenti famiglia
+            <input id="members" placeholder="Es. 2 adulti, 1 bambino" />
+          </label>
+          <label>
+            Stile alimentare
+            <input id="diet" placeholder="Es. Mediterranea" />
+          </label>
+          <label class="full">
+            Allergie / intolleranze
+            <textarea id="allergies" rows="3" placeholder="Es. Lattosio, arachidi"></textarea>
+          </label>
+          <button type="submit">Salva profilo</button>
+        </form>
+      </section>
+
+      <section class="card">
+        <h2>Suggerimento ricette AI</h2>
+        <button id="aiBtn">Genera suggerimento</button>
+        <pre id="aiOutput" class="output"></pre>
+      </section>
+
+      <section class="card">
+        <h2>Impostazioni AI</h2>
+        <form id="aiForm" class="form-grid">
+          <label class="full">
+            API Key
+            <input id="aiKey" type="password" placeholder="sk-..." />
+          </label>
+          <label>
+            Base URL
+            <input id="aiBase" placeholder="https://api.openai.com/v1" />
+          </label>
+          <label>
+            Modello
+            <input id="aiModel" placeholder="gpt-4o-mini" />
+          </label>
+          <button type="submit">Salva impostazioni AI</button>
+        </form>
+      </section>
+    </main>
+
+    <script src="app.js"></script>
+  </body>
+</html>
