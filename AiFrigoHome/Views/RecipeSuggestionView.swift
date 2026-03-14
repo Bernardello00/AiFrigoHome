@@ -16,6 +16,13 @@ struct RecipeSuggestionView: View {
                 Text(fridgeStore.ingredientsList().isEmpty ? "Nessun ingrediente disponibile." : fridgeStore.ingredientsList())
                     .foregroundStyle(.secondary)
 
+                if !fridgeStore.expiringIngredientsList().isEmpty {
+                    Text("Priorità scadenza")
+                        .font(.headline)
+                    Text(fridgeStore.expiringIngredientsList())
+                        .foregroundStyle(.orange)
+                }
+
                 Button {
                     Task { await fetchSuggestion() }
                 } label: {
@@ -57,8 +64,11 @@ struct RecipeSuggestionView: View {
 
         do {
             let service = try AIAdvisorService()
-            let ingredients = fridgeStore.ingredientsList()
-            suggestion = try await service.suggestRecipe(from: ingredients)
+            suggestion = try await service.suggestRecipe(
+                from: fridgeStore.ingredientsList(),
+                expiringIngredients: fridgeStore.expiringIngredientsList(),
+                profile: fridgeStore.profile
+            )
         } catch {
             errorMessage = error.localizedDescription
         }

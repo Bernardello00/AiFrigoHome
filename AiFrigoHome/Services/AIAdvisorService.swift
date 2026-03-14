@@ -30,13 +30,22 @@ struct AIAdvisorService {
         model = processInfo.environment["AI_MODEL"] ?? "gpt-4o-mini"
     }
 
-    func suggestRecipe(from ingredients: String) async throws -> String {
+    func suggestRecipe(from ingredients: String, expiringIngredients: String, profile: UserProfile) async throws -> String {
         let prompt = """
-        Sei un assistente culinario. Con questi ingredienti: \(ingredients).
+        Sei un assistente culinario. Ingredienti disponibili: \(ingredients).
+        Ingredienti in scadenza prioritaria: \(expiringIngredients.isEmpty ? "nessuno" : expiringIngredients).
+
+        Profilo famiglia:
+        - Nome: \(profile.householdName)
+        - Componenti: \(profile.householdMembers)
+        - Dieta: \(profile.dietStyle.rawValue)
+        - Allergie/intolleranze: \(profile.allergies.isEmpty ? "nessuna" : profile.allergies)
+
         Proponi:
         1) 2 ricette semplici
         2) tempi indicativi
-        3) priorità ingredienti da consumare prima per scadenza.
+        3) priorità ingredienti da consumare prima
+        4) porzioni adatte al nucleo famigliare
         Rispondi in italiano in modo sintetico.
         """
 
