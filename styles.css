@@ -1,0 +1,152 @@
+:root {
+  --bg: #f3f6fb;
+  --panel: #ffffff;
+  --line: #d9e2f2;
+  --text: #1d2432;
+  --muted: #637492;
+  --brand: #1f58d2;
+  --ok: #0f8a4a;
+  --warn: #df8b00;
+  --danger: #cc2f2f;
+}
+
+* { box-sizing: border-box; }
+body {
+  margin: 0;
+  font-family: Inter, system-ui, -apple-system, Segoe UI, Roboto, Arial, sans-serif;
+  background: var(--bg);
+  color: var(--text);
+}
+
+.topbar {
+  display: flex;
+  justify-content: space-between;
+  gap: 1rem;
+  align-items: center;
+  background: linear-gradient(135deg, #1b4dc7, #2a74ff);
+  color: #fff;
+  padding: 1rem;
+}
+.topbar h1 { margin: 0; }
+.subtitle { margin: .25rem 0 0; opacity: .9; font-size: .95rem; }
+
+.dashboard {
+  max-width: 1280px;
+  margin: 0 auto;
+  padding: 1rem;
+  display: grid;
+  gap: 1rem;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+}
+
+.kpi-grid {
+  grid-column: 1 / -1;
+  display: grid;
+  gap: .75rem;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+}
+.kpi-card {
+  background: #f7fbff;
+  border: 1px solid #d6e5ff;
+  border-radius: 12px;
+  padding: .8rem;
+}
+.kpi-card.warning { border-color: #f5ddb2; background: #fff9ef; }
+.kpi-card p { margin: 0 0 .2rem; color: #597095; font-size: .86rem; }
+.kpi-card strong { font-size: 1.5rem; }
+
+.panel {
+  background: var(--panel);
+  border: 1px solid var(--line);
+  border-radius: 14px;
+  padding: .95rem;
+  box-shadow: 0 2px 10px rgba(28, 51, 94, 0.06);
+}
+.span-2 { grid-column: span 2; }
+.panel h2 { margin-top: 0; font-size: 1.04rem; }
+.panel-head-row { display: flex; justify-content: space-between; align-items: center; gap: .7rem; }
+
+.form-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: .55rem;
+}
+label { display: grid; gap: .32rem; color: var(--muted); font-size: .92rem; }
+.full { grid-column: 1 / -1; }
+
+input, select, textarea, button {
+  font: inherit;
+  border-radius: 10px;
+  border: 1px solid var(--line);
+  padding: .62rem .7rem;
+}
+button {
+  background: var(--brand);
+  color: #fff;
+  border: none;
+  cursor: pointer;
+}
+button.secondary {
+  background: #fff;
+  color: var(--brand);
+  border: 1px solid #bcd3ff;
+}
+
+.list { margin: 0; padding: 0; list-style: none; display: grid; gap: .5rem; }
+.item, .person, .offer, .dish, .calendar-slot {
+  border: 1px solid var(--line);
+  border-left: 6px solid var(--ok);
+  border-radius: 10px;
+  padding: .65rem;
+}
+.item.warning { border-left-color: var(--warn); }
+.item.expired { border-left-color: var(--danger); }
+.meta { color: var(--muted); font-size: .88rem; }
+
+.chips { margin: .6rem 0 0; padding: 0; list-style: none; display: flex; flex-wrap: wrap; gap: .4rem; }
+.chips li {
+  background: #eef4ff;
+  border: 1px solid #ceddff;
+  color: #2f59bc;
+  border-radius: 999px;
+  padding: .35rem .6rem;
+  display: inline-flex;
+  gap: .35rem;
+  align-items: center;
+}
+.chips button { background: transparent; color: #2f59bc; padding: 0; border: none; font-weight: 700; }
+
+.vote-row { margin: .8rem 0; }
+.vote-actions { display: flex; gap: .45rem; margin-top: .5rem; }
+.vote-actions .yes { background: #11854b; }
+.vote-actions .no { background: #cc2f2f; }
+.details-box {
+  margin-top: .55rem;
+  background: #f8fbff;
+  border: 1px solid #d9e6ff;
+  border-radius: 9px;
+  padding: .55rem;
+}
+.badge { display: inline-block; padding: .22rem .5rem; border-radius: 999px; font-size: .78rem; }
+.badge.ok { background: #eaf8ef; color: #0f8a4a; border: 1px solid #bde9cd; }
+.badge.pending { background: #fff5e9; color: #b56d00; border: 1px solid #f0d3a4; }
+
+.output {
+  margin: .65rem 0 0;
+  white-space: pre-wrap;
+  min-height: 90px;
+  background: #f7faff;
+  border: 1px solid #dce7ff;
+  border-radius: 10px;
+  padding: .7rem;
+}
+
+@media (max-width: 1024px) {
+  .dashboard { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .kpi-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+}
+@media (max-width: 720px) {
+  .dashboard { grid-template-columns: 1fr; }
+  .span-2 { grid-column: span 1; }
+  .form-grid { grid-template-columns: 1fr; }
+}

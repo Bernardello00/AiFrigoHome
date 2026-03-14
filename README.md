@@ -1,79 +1,26 @@
-# AiFrigoHome (iOS)
+# AiFrigoHome Planner Web
 
-Applicazione iOS in **SwiftUI** per gestire il frigorifero di casa su due dispositivi e ricevere suggerimenti AI su ricette/consumo alimenti.
+Web app responsive per gestione frigo, pianificazione pasti e supporto decisionale famigliare.
 
-## Obiettivo
-- Tenere sincronizzata la lista alimenti su due iPhone/iPad.
-- Ridurre sprechi (scadenze, priorità uso ingredienti).
-- Ottenere consigli AI con gli ingredienti disponibili.
+## Funzionalità principali
+- Gestione alimenti con scadenze (senza barcode, rimosso per evitare UX incoerente senza scansione reale).
+- Profilo famiglia tramite **questionario per persona** (gusti, non graditi, intolleranze, obiettivi, note).
+- Pianificazione calendario **pranzo/cena** con proposta piatti e votazione utenti (es. Andrea sì / Giada no).
+- Approvazione automatica dei piatti con maggioranza voti e inserimento nel calendario.
+- Dettaglio piatto cliccabile con ingredienti, verifica disponibilità in frigo e ricetta.
+- Supermercati vicini (es. Esselunga vicino casa) e suggerimenti scontistiche contestuali.
+- Consigli AI che includono profili persone, supermercati vicini, offerte e piatti approvati.
 
-## Funzionalità implementate
-- Inserimento alimento con nome, quantità e data di scadenza.
-- Vista elenco alimenti ordinata per scadenza.
-- Evidenza visiva per alimenti in scadenza.
-- Notifiche locali per alimenti in scadenza (1 giorno prima).
-- Scanner barcode (VisionKit) per inserimento rapido.
-- Profilo famiglia/dieta (componenti, stile alimentare, allergie).
-- Suggerimento ricette AI personalizzato su ingredienti + profilo.
-- Sincronizzazione iCloud CloudKit di base (upload/download snapshot frigo).
+## Avvio
+```bash
+python3 -m http.server 5173
+```
+Apri `http://localhost:5173`.
 
-## Sincronizzazione tra 2 dispositivi iOS
-Per usare l'app su due dispositivi:
-1. Accedi con lo **stesso Apple ID** su entrambi.
-2. Abilita iCloud Drive.
-3. Nel progetto Xcode abilita il capability **iCloud / CloudKit**.
-4. Verifica il record type `FridgeSnapshot` nel container CloudKit privato.
-5. Usa i pulsanti "Invia su iCloud" e "Scarica da iCloud" nell'app.
+## Configurazione AI (opzionale)
+Nel pannello impostazioni AI:
+- API Key
+- Base URL (default `https://api.openai.com/v1`)
+- Modello (default `gpt-4o-mini`)
 
-## Permessi necessari
-- **Notifiche**: per avvisi di scadenza.
-- **Fotocamera**: per scansione barcode.
-
-Ricorda di impostare in `Info.plist`:
-- `NSCameraUsageDescription`
-- eventuali stringhe localizzate per spiegare l'uso.
-
-## Integrazione AI
-`AIAdvisorService` usa endpoint compatibile OpenAI (`/chat/completions`) e legge:
-- `AI_API_KEY`
-- `AI_BASE_URL` (opzionale, default OpenAI)
-- `AI_MODEL` (opzionale, default `gpt-4o-mini`)
-
-Per sviluppo locale puoi definire le variabili nello scheme di Xcode (Run > Arguments > Environment Variables).
-
-## Struttura
-- `AiFrigoHome/AiFrigoHomeApp.swift`: entry point.
-- `AiFrigoHome/Models/FoodItem.swift`: modello alimento.
-- `AiFrigoHome/Models/UserProfile.swift`: profilo famiglia/dieta.
-- `AiFrigoHome/Services/FridgeStore.swift`: stato + persistenza locale + sync.
-- `AiFrigoHome/Services/AIAdvisorService.swift`: chiamate AI.
-- `AiFrigoHome/Services/NotificationService.swift`: notifiche scadenze.
-- `AiFrigoHome/Services/CloudKitSyncService.swift`: sync CloudKit.
-- `AiFrigoHome/Views/ContentView.swift`: dashboard principale.
-- `AiFrigoHome/Views/AddItemView.swift`: inserimento alimento + barcode.
-- `AiFrigoHome/Views/RecipeSuggestionView.swift`: suggerimenti AI.
-- `AiFrigoHome/Views/ProfileSettingsView.swift`: impostazioni famiglia/dieta.
-- `AiFrigoHome/Views/BarcodeScannerView.swift`: scanner barcode.
-
-## Versione Expo (test su iPhone con Expo Go)
-È stata aggiunta anche una versione React Native/Expo in `expo-app/` per test rapido su iPhone.
-
-### Avvio rapido
-1. Installa dipendenze:
-   - `cd expo-app && npm install`
-2. (Opzionale) crea `.env` in `expo-app/` con:
-   - `EXPO_PUBLIC_AI_API_KEY=...`
-   - `EXPO_PUBLIC_AI_BASE_URL=https://api.openai.com/v1`
-   - `EXPO_PUBLIC_AI_MODEL=gpt-4o-mini`
-3. Avvia:
-   - `npm run start`
-4. Apri l'app **Expo Go** su iPhone e scansiona il QR.
-
-### Feature incluse nella versione Expo
-- Lista alimenti con persistenza locale (`AsyncStorage`).
-- Profilo famiglia/dieta con persistenza locale.
-- Scanner barcode via `expo-camera`.
-- Notifiche locali scadenza via `expo-notifications`.
-- Suggerimenti AI tramite endpoint compatibile OpenAI.
-
-> Nota: la sync CloudKit è disponibile nella versione SwiftUI nativa; nella versione Expo il focus è test rapido su iPhone tramite Expo Go.
+Senza API key, è disponibile un fallback locale con consigli contestuali.
