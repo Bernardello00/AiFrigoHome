@@ -1,38 +1,48 @@
 const state = {
   items: JSON.parse(localStorage.getItem('items') || '[]'),
-  profile: JSON.parse(localStorage.getItem('profile') || '{}'),
-  ai: JSON.parse(localStorage.getItem('ai') || '{}'),
-  budget: JSON.parse(localStorage.getItem('budget') || '{"monthly":0,"spent":0}'),
-  markets: JSON.parse(localStorage.getItem('markets') || '[]')
+  people: JSON.parse(localStorage.getItem('people') || '[]'),
+  markets: JSON.parse(localStorage.getItem('markets') || '[]'),
+  dishes: JSON.parse(localStorage.getItem('dishes') || '[]'),
+  ai: JSON.parse(localStorage.getItem('ai') || '{}')
+};
+
+const marketOffersCatalog = {
+  Esselunga: ['Pasta Integrale -30%', 'Petto di pollo 2x1', 'Yogurt greco -25%'],
+  Coop: ['Tonno in scatola -20%', 'Verdure surgelate -30%', 'Uova bio -15%'],
+  Conad: ['Passata di pomodoro -25%', 'Riso basmati -20%', 'Legumi secchi -30%'],
+  Carrefour: ['Salmone fresco -20%', 'Latte alta digeribilità -25%', 'Pane integrale -30%'],
+  Lidl: ['Mozzarella -35%', 'Zucchine -30%', 'Farina avena -20%']
 };
 
 const $ = (id) => document.getElementById(id);
-const foodCatalog = {
-  Pasta: { Esselunga: '€1.09', Coop: '€1.19', Lidl: '€0.89' },
-  Pomodori: { Esselunga: '€2.49/kg', Conad: '€2.29/kg', Lidl: '€1.99/kg' },
-  Uova: { Coop: '€2.39', Conad: '€2.49', Carrefour: '€2.59' },
-  Mozzarella: { Esselunga: '€0.99', Carrefour: '€1.09', Lidl: '€0.89' },
-  Zucchine: { Conad: '€1.89/kg', Coop: '€2.09/kg', Esselunga: '€1.99/kg' }
-};
 
 function save() {
   localStorage.setItem('items', JSON.stringify(state.items));
-  localStorage.setItem('profile', JSON.stringify(state.profile));
-  localStorage.setItem('ai', JSON.stringify(state.ai));
-  localStorage.setItem('budget', JSON.stringify(state.budget));
+  localStorage.setItem('people', JSON.stringify(state.people));
   localStorage.setItem('markets', JSON.stringify(state.markets));
+  localStorage.setItem('dishes', JSON.stringify(state.dishes));
+  localStorage.setItem('ai', JSON.stringify(state.ai));
 }
 
 function daysTo(dateStr) {
-  const d = new Date(dateStr);
-  const now = new Date();
-  d.setHours(0, 0, 0, 0);
-  now.setHours(0, 0, 0, 0);
-  return Math.ceil((d - now) / 86400000);
+  const date = new Date(dateStr);
+  const today = new Date();
+  date.setHours(0, 0, 0, 0);
+  today.setHours(0, 0, 0, 0);
+  return Math.ceil((date - today) / 86400000);
 }
 
-function formatEuro(value) {
-  return new Intl.NumberFormat('it-IT', { style: 'currency', currency: 'EUR' }).format(value || 0);
+function normalize(text) {
+  return String(text || '').trim().toLowerCase();
+}
+
+function approvedDishes() {
+  return state.dishes.filter((dish) => {
+    const votes = Object.values(dish.votes || {});
+    const yes = votes.filter((v) => v === 'yes').length;
+    const no = votes.filter((v) => v === 'no').length;
+    return votes.length > 0 && yes > no;
+  });
 }
 
 function renderKpi() {
@@ -40,51 +50,67 @@ function renderKpi() {
     const d = daysTo(i.expiry);
     return d >= 0 && d <= 2;
   }).length;
-  const expired = state.items.filter((i) => daysTo(i.expiry) < 0).length;
-  const residual = Math.max((state.budget.monthly || 0) - (state.budget.spent || 0), 0);
 
   $('kpiItems').textContent = state.items.length;
   $('kpiExpiring').textContent = expiring;
-  $('kpiExpired').textContent = expired;
-  $('kpiBudget').textContent = formatEuro(residual);
-}
-
-function renderBudget() {
-  const monthly = Number(state.budget.monthly || 0);
-  const spent = Number(state.budget.spent || 0);
-  const percent = monthly > 0 ? Math.min((spent / monthly) * 100, 100) : 0;
-
-  $('monthlyBudget').value = monthly || '';
-  $('budgetBar').style.width = `${percent}%`;
-  $('budgetInfo').textContent = monthly > 0
-    ? `Hai speso ${formatEuro(spent)} su ${formatEuro(monthly)} (${percent.toFixed(0)}%).`
-    : 'Imposta il budget per iniziare.';
+  $('kpiPeople').textContent = state.people.length;
+  $('kpiApproved').textContent = approvedDishes().length;
 }
 
 function renderItems() {
-  const list = $('itemsList');
-  list.innerHTML = '';
-  state.items.sort((a, b) => a.expiry.localeCompare(b.expiry));
+  const el = $('itemsList');
+  el.innerHTML = '';
+  const ordered = [...state.items].sort((a, b) => a.expiry.localeCompare(b.expiry));
 
-  if (!state.items.length) {
-    list.innerHTML = '<li class="muted">Nessun alimento inserito.</li>';
+  if (!ordered.length) {
+    el.innerHTML = '<li class="meta">Nessun alimento inserito.</li>';
     return;
   }
 
-  for (const item of state.items) {
+  for (const item of ordered) {
     const d = daysTo(item.expiry);
     const cls = d < 0 ? 'expired' : d <= 2 ? 'warning' : '';
-    const badge = d < 0 ? 'Scaduto' : d === 0 ? 'Scade oggi' : `Scade tra ${d} giorni`;
+    const tag = d < 0 ? 'Scaduto' : d === 0 ? 'Scade oggi' : `Scade tra ${d} giorni`;
 
     const li = document.createElement('li');
     li.className = `item ${cls}`;
     li.innerHTML = `
       <div>
         <strong>${item.name}</strong>
-        <div class="meta">Quantità: ${item.quantity} · ${badge}</div>
-        ${item.barcode ? `<div class="meta">Barcode: ${item.barcode}</div>` : ''}
+        <div class="meta">Quantità: ${item.quantity} · ${tag}</div>
       </div>
-      <button data-id="${item.id}" class="secondary">Elimina</button>
+      <button data-item-id="${item.id}" class="secondary">Elimina</button>
+    `;
+    el.appendChild(li);
+  }
+}
+
+function renderPeople() {
+  const list = $('peopleList');
+  list.innerHTML = '';
+
+  if (!state.people.length) {
+    list.innerHTML = '<li class="meta">Nessuna persona configurata.</li>';
+    $('voterSelect').innerHTML = '<option value="">Aggiungi una persona</option>';
+    return;
+  }
+
+  const options = state.people.map((p) => `<option value="${p.id}">${p.name}</option>`).join('');
+  $('voterSelect').innerHTML = options;
+
+  for (const person of state.people) {
+    const li = document.createElement('li');
+    li.className = 'person';
+    li.innerHTML = `
+      <div>
+        <strong>${person.name}</strong>
+        <div class="meta">Età: ${person.age || '-'} · Obiettivo: ${person.goal || '-'}</div>
+        <div class="meta">Preferiti: ${person.likes || '-'}</div>
+        <div class="meta">Non graditi: ${person.dislikes || '-'}</div>
+        <div class="meta">Intolleranze: ${person.intolerances || '-'}</div>
+        <div class="meta">Note: ${person.notes || '-'}</div>
+      </div>
+      <button data-person-id="${person.id}" class="secondary">Rimuovi</button>
     `;
     list.appendChild(li);
   }
@@ -93,61 +119,147 @@ function renderItems() {
 function renderMarkets() {
   const list = $('marketsList');
   list.innerHTML = '';
+
   if (!state.markets.length) {
-    list.innerHTML = '<li class="muted">Nessun supermercato impostato.</li>';
+    list.innerHTML = '<li class="meta">Nessun supermercato vicino configurato.</li>';
     return;
   }
 
   for (const market of state.markets) {
     const li = document.createElement('li');
-    li.innerHTML = `${market} <button data-market="${market}" aria-label="rimuovi supermercato">×</button>`;
+    li.innerHTML = `${market.chain} (${market.distance} km) <button data-market-id="${market.id}">×</button>`;
     list.appendChild(li);
   }
 }
 
-function computeMissingIngredients() {
-  const names = state.items.map((i) => i.name.toLowerCase());
-  return Object.keys(foodCatalog).filter((ingredient) => !names.includes(ingredient.toLowerCase()));
+function computeIngredientCoverage(ingredients) {
+  const pantry = state.items.map((i) => normalize(i.name));
+  const missing = ingredients.filter((ing) => !pantry.includes(normalize(ing)));
+  return {
+    allPresent: missing.length === 0,
+    missing
+  };
+}
+
+function renderDishes() {
+  const list = $('dishesList');
+  list.innerHTML = '';
+
+  if (!state.dishes.length) {
+    list.innerHTML = '<li class="meta">Nessun piatto proposto.</li>';
+    return;
+  }
+
+  const ordered = [...state.dishes].sort((a, b) => `${a.date}${a.mealType}`.localeCompare(`${b.date}${b.mealType}`));
+
+  for (const dish of ordered) {
+    const votes = Object.values(dish.votes || {});
+    const yes = votes.filter((v) => v === 'yes').length;
+    const no = votes.filter((v) => v === 'no').length;
+    const approved = votes.length > 0 && yes > no;
+    const coverage = computeIngredientCoverage(dish.ingredients);
+
+    const li = document.createElement('li');
+    li.className = 'dish';
+    li.innerHTML = `
+      <div>
+        <strong>${dish.name}</strong>
+        <div class="meta">${dish.date} · ${dish.mealType.toUpperCase()} · Voti sì/no: ${yes}/${no}</div>
+        <span class="badge ${approved ? 'ok' : 'pending'}">${approved ? 'Approvato' : 'In votazione'}</span>
+        <div class="vote-actions">
+          <button data-vote="yes" data-dish-id="${dish.id}" class="yes">Voto Sì</button>
+          <button data-vote="no" data-dish-id="${dish.id}" class="no">Voto No</button>
+          <button data-detail-id="${dish.id}" class="secondary">Dettagli</button>
+          <button data-remove-dish-id="${dish.id}" class="secondary">Elimina</button>
+        </div>
+        <div class="details-box" id="detail-${dish.id}" hidden>
+          <div class="meta"><strong>Ingredienti:</strong> ${dish.ingredients.join(', ')}</div>
+          <div class="meta"><strong>Disponibilità:</strong> ${coverage.allPresent ? 'Tutti presenti' : `Mancano: ${coverage.missing.join(', ')}`}</div>
+          <div class="meta"><strong>Ricetta:</strong> ${dish.recipe || 'Non inserita'}</div>
+        </div>
+      </div>
+    `;
+
+    list.appendChild(li);
+  }
+}
+
+function renderCalendar() {
+  const list = $('calendarList');
+  list.innerHTML = '';
+  const approved = approvedDishes();
+
+  if (!approved.length) {
+    list.innerHTML = '<li class="meta">Nessun piatto ancora approvato per calendario.</li>';
+    return;
+  }
+
+  const grouped = {};
+  for (const dish of approved) {
+    if (!grouped[dish.date]) grouped[dish.date] = { pranzo: null, cena: null };
+    grouped[dish.date][dish.mealType] = dish;
+  }
+
+  Object.keys(grouped)
+    .sort()
+    .forEach((date) => {
+      const slot = grouped[date];
+      const li = document.createElement('li');
+      li.className = 'calendar-slot';
+      li.innerHTML = `
+        <strong>${date}</strong>
+        <div class="meta">Pranzo: ${slot.pranzo ? slot.pranzo.name : '-'}</div>
+        <div class="meta">Cena: ${slot.cena ? slot.cena.name : '-'}</div>
+      `;
+      list.appendChild(li);
+    });
+}
+
+function computeOfferSuggestions() {
+  const offers = [];
+  const sortedMarkets = [...state.markets].sort((a, b) => Number(a.distance) - Number(b.distance));
+  const missingFromApproved = [...new Set(approvedDishes().flatMap((d) => computeIngredientCoverage(d.ingredients).missing))];
+
+  for (const market of sortedMarkets) {
+    const promos = marketOffersCatalog[market.chain] || [];
+    offers.push({
+      title: `${market.chain} vicino a casa (${market.distance} km)`,
+      detail: promos.slice(0, 2).join(' · ') || 'Nessuna promo disponibile'
+    });
+  }
+
+  if (missingFromApproved.length) {
+    offers.unshift({
+      title: 'Ingredienti da integrare per i piatti approvati',
+      detail: missingFromApproved.join(', ')
+    });
+  }
+
+  return offers;
 }
 
 function renderOffers() {
-  const offers = $('offersList');
-  offers.innerHTML = '';
-  const preferred = state.markets;
-  const missing = computeMissingIngredients().slice(0, 5);
+  const list = $('offersList');
+  list.innerHTML = '';
+  const suggestions = computeOfferSuggestions();
 
-  if (!preferred.length) {
-    offers.innerHTML = '<li class="muted">Aggiungi i supermercati preferiti per vedere offerte utili.</li>';
+  if (!suggestions.length) {
+    list.innerHTML = '<li class="meta">Configura supermercati vicini per attivare i consigli scontistiche.</li>';
     return;
   }
 
-  if (!missing.length) {
-    offers.innerHTML = '<li class="muted">Ottimo! Hai già molti ingredienti base in casa.</li>';
-    return;
-  }
-
-  for (const ingredient of missing) {
-    const marketPrices = foodCatalog[ingredient] || {};
-    const available = preferred
-      .filter((m) => marketPrices[m])
-      .map((m) => `${m}: ${marketPrices[m]}`);
-
+  for (const offer of suggestions) {
     const li = document.createElement('li');
     li.className = 'offer';
-    li.innerHTML = `
-      <div>
-        <strong>${ingredient}</strong>
-        <div class="meta">${available.length ? available.join(' · ') : 'Nessuna promo specifica disponibile nei market selezionati.'}</div>
-      </div>
-    `;
-    offers.appendChild(li);
+    li.innerHTML = `<div><strong>${offer.title}</strong><div class="meta">${offer.detail}</div></div>`;
+    list.appendChild(li);
   }
 }
 
 function scheduleExpiryNotice() {
   if (!('Notification' in window) || Notification.permission !== 'granted') return;
-  const soon = state.items.filter((i) => {
-    const d = daysTo(i.expiry);
+  const soon = state.items.filter((item) => {
+    const d = daysTo(item.expiry);
     return d >= 0 && d <= 1;
   });
   if (!soon.length) return;
@@ -160,8 +272,7 @@ $('itemForm').addEventListener('submit', (e) => {
     id: crypto.randomUUID(),
     name: $('name').value.trim(),
     quantity: $('quantity').value.trim(),
-    expiry: $('expiry').value,
-    barcode: $('barcode').value.trim()
+    expiry: $('expiry').value
   });
   $('itemForm').reset();
   save();
@@ -170,53 +281,112 @@ $('itemForm').addEventListener('submit', (e) => {
 });
 
 $('itemsList').addEventListener('click', (e) => {
-  const id = e.target.dataset.id;
+  const id = e.target.dataset.itemId;
   if (!id) return;
-  state.items = state.items.filter((x) => x.id !== id);
+  state.items = state.items.filter((item) => item.id !== id);
   save();
   renderAll();
 });
 
-$('profileForm').addEventListener('submit', (e) => {
+$('personForm').addEventListener('submit', (e) => {
   e.preventDefault();
-  state.profile = {
-    members: $('members').value.trim(),
-    diet: $('diet').value.trim(),
-    allergies: $('allergies').value.trim()
-  };
-  save();
-  $('aiOutput').textContent = 'Profilo salvato con successo.';
-});
-
-$('budgetForm').addEventListener('submit', (e) => {
-  e.preventDefault();
-  state.budget.monthly = Number($('monthlyBudget').value || 0);
-  state.budget.spent = Number(state.budget.spent || 0) + Number($('spentAmount').value || 0);
-  $('spentAmount').value = '';
+  state.people.push({
+    id: crypto.randomUUID(),
+    name: $('personName').value.trim(),
+    age: $('personAge').value.trim(),
+    goal: $('personGoal').value.trim(),
+    intolerances: $('personIntolerances').value.trim(),
+    likes: $('personLikes').value.trim(),
+    dislikes: $('personDislikes').value.trim(),
+    notes: $('personNotes').value.trim()
+  });
+  $('personForm').reset();
   save();
   renderAll();
 });
 
-$('resetSpentBtn').addEventListener('click', () => {
-  state.budget.spent = 0;
+$('peopleList').addEventListener('click', (e) => {
+  const id = e.target.dataset.personId;
+  if (!id) return;
+  state.people = state.people.filter((p) => p.id !== id);
+  for (const dish of state.dishes) {
+    if (dish.votes) delete dish.votes[id];
+  }
   save();
   renderAll();
 });
 
 $('marketForm').addEventListener('submit', (e) => {
   e.preventDefault();
-  const market = $('marketInput').value.trim();
-  if (!market) return;
-  if (!state.markets.includes(market)) state.markets.push(market);
-  $('marketInput').value = '';
+  state.markets.push({
+    id: crypto.randomUUID(),
+    zone: $('homeZone').value.trim(),
+    chain: $('marketChain').value,
+    distance: Number($('marketDistance').value || 0)
+  });
+  $('marketDistance').value = '';
   save();
   renderAll();
 });
 
 $('marketsList').addEventListener('click', (e) => {
-  const market = e.target.dataset.market;
-  if (!market) return;
-  state.markets = state.markets.filter((m) => m !== market);
+  const id = e.target.dataset.marketId;
+  if (!id) return;
+  state.markets = state.markets.filter((m) => m.id !== id);
+  save();
+  renderAll();
+});
+
+$('refreshOffersBtn').addEventListener('click', () => {
+  renderOffers();
+  $('aiOutput').textContent = 'Consigli offerte aggiornati in base ai supermercati più vicini.';
+});
+
+$('dishForm').addEventListener('submit', (e) => {
+  e.preventDefault();
+  state.dishes.push({
+    id: crypto.randomUUID(),
+    name: $('dishName').value.trim(),
+    date: $('dishDate').value,
+    mealType: $('dishMealType').value,
+    ingredients: $('dishIngredients').value.split(',').map((x) => x.trim()).filter(Boolean),
+    recipe: $('dishRecipe').value.trim(),
+    votes: {}
+  });
+  $('dishForm').reset();
+  save();
+  renderAll();
+});
+
+$('dishesList').addEventListener('click', (e) => {
+  const dishId = e.target.dataset.dishId;
+  const vote = e.target.dataset.vote;
+  const detailId = e.target.dataset.detailId;
+  const removeDishId = e.target.dataset.removeDishId;
+
+  if (removeDishId) {
+    state.dishes = state.dishes.filter((d) => d.id !== removeDishId);
+    save();
+    renderAll();
+    return;
+  }
+
+  if (detailId) {
+    const detail = document.getElementById(`detail-${detailId}`);
+    if (detail) detail.hidden = !detail.hidden;
+    return;
+  }
+
+  if (!dishId || !vote) return;
+  const voter = $('voterSelect').value;
+  if (!voter) {
+    $('aiOutput').textContent = 'Aggiungi almeno una persona per poter votare i piatti.';
+    return;
+  }
+
+  const dish = state.dishes.find((d) => d.id === dishId);
+  if (!dish) return;
+  dish.votes[voter] = vote;
   save();
   renderAll();
 });
@@ -233,19 +403,23 @@ $('aiForm').addEventListener('submit', (e) => {
 });
 
 $('aiBtn').addEventListener('click', async () => {
-  const ingredients = state.items.map((i) => `${i.name} (${i.quantity})`).join(', ') || 'nessun ingrediente';
-  const profile = `Famiglia: ${state.profile.members || '-'}; Dieta: ${state.profile.diet || '-'}; Allergie: ${state.profile.allergies || '-'}`;
-  const marketLine = state.markets.length ? `Supermercati preferiti: ${state.markets.join(', ')}` : 'Nessun supermercato preferito impostato';
-  const missing = computeMissingIngredients().slice(0, 6).join(', ') || 'nessuno';
+  const nearest = [...state.markets].sort((a, b) => a.distance - b.distance).slice(0, 2);
+  const nearestText = nearest.length
+    ? nearest.map((m) => `${m.chain} (${m.distance} km)`).join(', ')
+    : 'nessun supermercato configurato';
+  const approved = approvedDishes();
+  const approvedText = approved.map((d) => `${d.name} (${d.date} ${d.mealType})`).join('; ') || 'nessun piatto approvato';
+  const peopleContext = state.people.map((p) => `${p.name}: likes ${p.likes || '-'}, dislikes ${p.dislikes || '-'}, intolleranze ${p.intolerances || '-'}`).join(' | ') || 'nessun profilo';
+  const offersContext = computeOfferSuggestions().map((o) => `${o.title}: ${o.detail}`).join(' | ') || 'nessuna offerta';
 
   if (!state.ai.apiKey) {
-    $('aiOutput').textContent = `Suggerimento locale:\n- Usa: ${ingredients}\n- Da acquistare: ${missing}\n- ${marketLine}\n\nRicetta: bowl proteica con ingredienti freschi + variante pasta veloce. Controlla le offerte nella sezione dedicata.`;
+    $('aiOutput').textContent = `Suggerimento locale:\nSupermercati vicini: ${nearestText}.\nOfferte: ${offersContext}.\nPiatti approvati: ${approvedText}.\n\nConsiglio: pianifica acquisti sulla catena più vicina e completa gli ingredienti mancanti prima del pranzo/cena.`;
     return;
   }
 
-  $('aiOutput').textContent = 'Generazione consigli in corso...';
+  $('aiOutput').textContent = 'Generazione consigli AI in corso...';
   try {
-    const res = await fetch(`${state.ai.baseUrl}/chat/completions`, {
+    const response = await fetch(`${state.ai.baseUrl}/chat/completions`, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
@@ -254,46 +428,49 @@ $('aiBtn').addEventListener('click', async () => {
       body: JSON.stringify({
         model: state.ai.model,
         messages: [
-          { role: 'system', content: 'Sei un assistente di meal planning e spesa.' },
+          { role: 'system', content: 'Sei un assistente meal planner e spesa intelligente.' },
           {
             role: 'user',
-            content: `Ingredienti in frigo: ${ingredients}. Profilo: ${profile}. ${marketLine}. Ingredienti mancanti: ${missing}. Dammi 3 ricette + lista acquisti minima e dove conviene cercare offerte.`
+            content: `Profili: ${peopleContext}. Supermercati vicini: ${nearestText}. Offerte rilevate: ${offersContext}. Piatti approvati in calendario: ${approvedText}. Fornisci consigli su scontistiche vicine e ottimizzazione ricette.`
           }
         ],
         temperature: 0.7
       })
     });
-    if (!res.ok) throw new Error(`Errore API (${res.status})`);
-    const json = await res.json();
+
+    if (!response.ok) throw new Error(`Errore API (${response.status})`);
+    const json = await response.json();
     $('aiOutput').textContent = json.choices?.[0]?.message?.content || 'Nessuna risposta.';
-  } catch (err) {
-    $('aiOutput').textContent = `Errore AI: ${err.message}`;
+  } catch (error) {
+    $('aiOutput').textContent = `Errore AI: ${error.message}`;
   }
 });
 
 $('notifyBtn').addEventListener('click', async () => {
   if (!('Notification' in window)) {
-    $('aiOutput').textContent = 'Notifiche non supportate da questo browser.';
+    $('aiOutput').textContent = 'Notifiche non supportate dal browser.';
     return;
   }
-  const p = await Notification.requestPermission();
-  $('aiOutput').textContent = p === 'granted' ? 'Notifiche abilitate.' : 'Permesso notifiche negato.';
+  const permission = await Notification.requestPermission();
+  $('aiOutput').textContent = permission === 'granted' ? 'Notifiche abilitate.' : 'Permesso notifiche negato.';
 });
 
 function hydrate() {
-  $('members').value = state.profile.members || '';
-  $('diet').value = state.profile.diet || '';
-  $('allergies').value = state.profile.allergies || '';
   $('aiKey').value = state.ai.apiKey || '';
   $('aiBase').value = state.ai.baseUrl || 'https://api.openai.com/v1';
   $('aiModel').value = state.ai.model || 'gpt-4o-mini';
+
+  const defaultZone = state.markets[0]?.zone || '';
+  $('homeZone').value = defaultZone;
 }
 
 function renderAll() {
   renderItems();
+  renderPeople();
   renderMarkets();
+  renderDishes();
+  renderCalendar();
   renderOffers();
-  renderBudget();
   renderKpi();
 }
 
