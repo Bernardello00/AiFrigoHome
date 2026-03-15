@@ -1,46 +1,51 @@
-# AiFrigoHome React Live
+# AiFrigoHome React Live (Gemini)
 
-Versione migrata in **React.js** con UI moderna in **Material UI**, dati supermercati/offerte online e calendario mese corrente.
+Applicazione web in **React.js** con UI moderna Material UI, dati live online e integrazione **Gemini API (free tier)**.
 
-## Stack UI/UX moderno
-- React 18 (runtime browser)
-- Material UI (component library)
-- Dialog, card, grid responsive, feedback visuale con alert/chip
+## Struttura codice (più pulita)
+Il codice è stato diviso in sezioni/file per manutenzione semplice:
+- `app/config.js`: costanti globali e config default.
+- `app/utils.js`: utility (normalizzazione, distanza, riconoscimento catena).
+- `app/services.js`: servizi live (ricerca supermercati online, offerte online).
+- `app/gemini.js`: integrazione Gemini (check connessione + generateContent).
+- `app-react.js`: UI React e orchestrazione flussi.
+- `index.html`: bootstrap librerie + mount React.
 
-## Avvio rapido
-Non serve build locale:
+## Avvio
 ```bash
 python3 -m http.server 5173
 ```
 Apri `http://localhost:5173`.
 
-## Configurazione AI GPT
+## Configurazione Gemini API (free)
 Nel pannello AI inserisci:
-- API Key
-- Base URL (default `https://api.openai.com/v1`)
-- Modello (es. `gpt-4o-mini`)
+- **Gemini API key**
+- Base URL (default: `https://generativelanguage.googleapis.com/v1beta`)
+- Modello (default: `gemini-1.5-flash`)
 
-### Come creare la API key
-1. Vai su OpenAI Platform con il tuo account.
-2. Apri la sezione **API Keys**.
-3. Clicca **Create new secret key**.
-4. Copia la chiave e incollala nel campo **API key** dell’app.
-5. Assicurati che billing/quota siano attivi.
+### Come creare la key Gemini
+1. Vai su **Google AI Studio**.
+2. Accedi con il tuo account Google.
+3. Apri la sezione API keys.
+4. Crea una nuova key.
+5. Copia/incolla la key nel campo **Gemini API key** nell’app.
 
-> Non salvare mai la chiave nel repository.
+> Non salvare mai la key nel repository.
 
-## Sicurezza UX AI
-- Le azioni AI sono **disabilitate** finché non configuri API key/baseUrl/modello.
-- È presente un pulsante **Check connessione AI** che testa la raggiungibilità reale (`GET /models`).
-- Se il check fallisce, i consigli AI restano disabilitati.
-- Gestione errore `429` con fallback informativo.
+## Check connessione AI (obbligatorio)
+- Usa il pulsante **Check connessione Gemini**.
+- L’app verifica la connessione reale via endpoint `GET /models`.
+- I pulsanti AI restano disabilitati finché:
+  - la configurazione non è completa;
+  - il check connessione non è OK.
 
 ## Dati live online
-- Supermercati vicini: Nominatim + Overpass (OpenStreetMap), query da indirizzo/raggio.
-- Offerte: recupero online via feed news/volantini per catena + zona (nessuna lista statica hardcoded).
+- Supermercati vicini: Nominatim + Overpass (OpenStreetMap).
+- Offerte: feed online per catena/zona (no lista statica hardcoded).
 
-## Feature principali
-- Gestione alimenti e scadenze.
-- Persone (popup) con preferiti/non graditi.
-- Proposte piatti, votazioni per persona e approvazione.
-- Calendario visuale del **mese corrente** con eventi pranzo/cena.
+## Feature
+- Gestione alimenti/scadenze.
+- Persone con preferiti/non graditi (popup).
+- Proposta piatti, votazioni e approvazione.
+- Calendario mese corrente con eventi pranzo/cena.
+- Gestione errore AI `429` con fallback informativo.
