@@ -124,7 +124,11 @@ window.GeminiService = {
       contents: [{ role: 'user', parts: [{ text: prompt }] }],
       generationConfig: minimal
         ? { temperature: 0, maxOutputTokens: 8 }
-        : { temperature: 0.6, maxOutputTokens: 512 }
+        : {
+          temperature: 0.2,
+          maxOutputTokens: 512,
+          responseMimeType: 'application/json'
+        }
     };
   },
 
