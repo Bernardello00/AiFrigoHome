@@ -1,79 +1,46 @@
-# AiFrigoHome (iOS)
+# AiFrigoHome React Live
 
-Applicazione iOS in **SwiftUI** per gestire il frigorifero di casa su due dispositivi e ricevere suggerimenti AI su ricette/consumo alimenti.
+Versione migrata in **React.js** con UI moderna in **Material UI**, dati supermercati/offerte online e calendario mese corrente.
 
-## Obiettivo
-- Tenere sincronizzata la lista alimenti su due iPhone/iPad.
-- Ridurre sprechi (scadenze, priorità uso ingredienti).
-- Ottenere consigli AI con gli ingredienti disponibili.
+## Stack UI/UX moderno
+- React 18 (runtime browser)
+- Material UI (component library)
+- Dialog, card, grid responsive, feedback visuale con alert/chip
 
-## Funzionalità implementate
-- Inserimento alimento con nome, quantità e data di scadenza.
-- Vista elenco alimenti ordinata per scadenza.
-- Evidenza visiva per alimenti in scadenza.
-- Notifiche locali per alimenti in scadenza (1 giorno prima).
-- Scanner barcode (VisionKit) per inserimento rapido.
-- Profilo famiglia/dieta (componenti, stile alimentare, allergie).
-- Suggerimento ricette AI personalizzato su ingredienti + profilo.
-- Sincronizzazione iCloud CloudKit di base (upload/download snapshot frigo).
+## Avvio rapido
+Non serve build locale:
+```bash
+python3 -m http.server 5173
+```
+Apri `http://localhost:5173`.
 
-## Sincronizzazione tra 2 dispositivi iOS
-Per usare l'app su due dispositivi:
-1. Accedi con lo **stesso Apple ID** su entrambi.
-2. Abilita iCloud Drive.
-3. Nel progetto Xcode abilita il capability **iCloud / CloudKit**.
-4. Verifica il record type `FridgeSnapshot` nel container CloudKit privato.
-5. Usa i pulsanti "Invia su iCloud" e "Scarica da iCloud" nell'app.
+## Configurazione AI GPT
+Nel pannello AI inserisci:
+- API Key
+- Base URL (default `https://api.openai.com/v1`)
+- Modello (es. `gpt-4o-mini`)
 
-## Permessi necessari
-- **Notifiche**: per avvisi di scadenza.
-- **Fotocamera**: per scansione barcode.
+### Come creare la API key
+1. Vai su OpenAI Platform con il tuo account.
+2. Apri la sezione **API Keys**.
+3. Clicca **Create new secret key**.
+4. Copia la chiave e incollala nel campo **API key** dell’app.
+5. Assicurati che billing/quota siano attivi.
 
-Ricorda di impostare in `Info.plist`:
-- `NSCameraUsageDescription`
-- eventuali stringhe localizzate per spiegare l'uso.
+> Non salvare mai la chiave nel repository.
 
-## Integrazione AI
-`AIAdvisorService` usa endpoint compatibile OpenAI (`/chat/completions`) e legge:
-- `AI_API_KEY`
-- `AI_BASE_URL` (opzionale, default OpenAI)
-- `AI_MODEL` (opzionale, default `gpt-4o-mini`)
+## Sicurezza UX AI
+- Le azioni AI sono **disabilitate** finché non configuri API key/baseUrl/modello.
+- È presente un pulsante **Check connessione AI** che testa la raggiungibilità reale (`GET /models`).
+- Se il check fallisce, i consigli AI restano disabilitati.
+- Gestione errore `429` con fallback informativo.
 
-Per sviluppo locale puoi definire le variabili nello scheme di Xcode (Run > Arguments > Environment Variables).
+## Dati live online
+- Supermercati vicini: Nominatim + Overpass (OpenStreetMap), query da indirizzo/raggio.
+- Offerte: recupero online via feed news/volantini per catena + zona (nessuna lista statica hardcoded).
 
-## Struttura
-- `AiFrigoHome/AiFrigoHomeApp.swift`: entry point.
-- `AiFrigoHome/Models/FoodItem.swift`: modello alimento.
-- `AiFrigoHome/Models/UserProfile.swift`: profilo famiglia/dieta.
-- `AiFrigoHome/Services/FridgeStore.swift`: stato + persistenza locale + sync.
-- `AiFrigoHome/Services/AIAdvisorService.swift`: chiamate AI.
-- `AiFrigoHome/Services/NotificationService.swift`: notifiche scadenze.
-- `AiFrigoHome/Services/CloudKitSyncService.swift`: sync CloudKit.
-- `AiFrigoHome/Views/ContentView.swift`: dashboard principale.
-- `AiFrigoHome/Views/AddItemView.swift`: inserimento alimento + barcode.
-- `AiFrigoHome/Views/RecipeSuggestionView.swift`: suggerimenti AI.
-- `AiFrigoHome/Views/ProfileSettingsView.swift`: impostazioni famiglia/dieta.
-- `AiFrigoHome/Views/BarcodeScannerView.swift`: scanner barcode.
-
-## Versione Expo (test su iPhone con Expo Go)
-È stata aggiunta anche una versione React Native/Expo in `expo-app/` per test rapido su iPhone.
-
-### Avvio rapido
-1. Installa dipendenze:
-   - `cd expo-app && npm install`
-2. (Opzionale) crea `.env` in `expo-app/` con:
-   - `EXPO_PUBLIC_AI_API_KEY=...`
-   - `EXPO_PUBLIC_AI_BASE_URL=https://api.openai.com/v1`
-   - `EXPO_PUBLIC_AI_MODEL=gpt-4o-mini`
-3. Avvia:
-   - `npm run start`
-4. Apri l'app **Expo Go** su iPhone e scansiona il QR.
-
-### Feature incluse nella versione Expo
-- Lista alimenti con persistenza locale (`AsyncStorage`).
-- Profilo famiglia/dieta con persistenza locale.
-- Scanner barcode via `expo-camera`.
-- Notifiche locali scadenza via `expo-notifications`.
-- Suggerimenti AI tramite endpoint compatibile OpenAI.
-
-> Nota: la sync CloudKit è disponibile nella versione SwiftUI nativa; nella versione Expo il focus è test rapido su iPhone tramite Expo Go.
+## Feature principali
+- Gestione alimenti e scadenze.
+- Persone (popup) con preferiti/non graditi.
+- Proposte piatti, votazioni per persona e approvazione.
+- Calendario visuale del **mese corrente** con eventi pranzo/cena.
