@@ -33,6 +33,7 @@ function App() {
   const [aiOutput, setAiOutput] = React.useState('');
   const [personOpen, setPersonOpen] = React.useState(false);
   const [voterId, setVoterId] = React.useState('');
+  const [marketNameFilter, setMarketNameFilter] = React.useState('');
 
   const [itemDraft, setItemDraft] = React.useState({ name: '', quantity: '', expiry: new Date().toISOString().slice(0, 10) });
   const [dishDraft, setDishDraft] = React.useState({ name: '', date: new Date().toISOString().slice(0, 10), mealType: 'pranzo', ingredients: '', recipe: '' });
@@ -53,6 +54,12 @@ function App() {
     const pantry = state.items.map((i) => window.AppUtils.normalize(i.name));
     return [...new Set(approvedDishes.flatMap((d) => d.ingredients.filter((ing) => !pantry.includes(window.AppUtils.normalize(ing)))))];
   }, [approvedDishes, state.items]);
+
+  const filteredMarkets = React.useMemo(() => {
+    const needle = window.AppUtils.normalize(marketNameFilter);
+    if (!needle) return state.marketsFound;
+    return state.marketsFound.filter((m) => window.AppUtils.normalize(m.name).includes(needle) || window.AppUtils.normalize(m.chain).includes(needle));
+  }, [state.marketsFound, marketNameFilter]);
 
   const aiConfigured = Boolean(state.ai.apiKey && state.ai.baseUrl && state.ai.model);
   const aiEnabled = aiConfigured && aiStatus.checked && aiStatus.ok;
@@ -125,6 +132,47 @@ function App() {
         return;
       }
       setAiOutput(`Errore Gemini: ${err.message}`);
+    }
+  }
+
+  async function generateDishDetailsWithAi() {
+    if (!aiEnabled) return setStatus('Prima verifica la connessione Gemini.');
+    if (!dishDraft.name) return setStatus('Inserisci prima il nome del piatto.');
+
+    const pantryItems = state.items.map((i) => i.name).filter(Boolean);
+    setStatus('Generazione ingredienti e ricetta con AI in corso...');
+
+    const prompt = `Sei uno chef nutrizionista.
+Piatto richiesto: ${dishDraft.name}.
+Ingredienti disponibili in frigo: ${pantryItems.join(', ') || 'nessuno'}.
+Rispondi SOLO in JSON valido nel formato: {"ingredientiPresenti": ["..."], "ingredientiMancanti": ["..."], "ricetta": "testo breve step by step"}.
+Non aggiungere markdown o testo extra.`;
+
+    try {
+      const raw = await window.GeminiService.generate(state.ai, prompt);
+      const cleaned = raw.replace(/```json|```/gi, '').trim();
+      const parsed = JSON.parse(cleaned);
+
+      const ingredientiPresenti = Array.isArray(parsed.ingredientiPresenti) ? parsed.ingredientiPresenti : [];
+      const ingredientiMancanti = Array.isArray(parsed.ingredientiMancanti) ? parsed.ingredientiMancanti : [];
+      const ricetta = String(parsed.ricetta || '').trim();
+
+      const combinedIngredients = [...new Set([...ingredientiPresenti, ...ingredientiMancanti].map((x) => String(x || '').trim()).filter(Boolean))];
+      const recipeWithAvailability = [
+        `Ingredienti presenti: ${ingredientiPresenti.join(', ') || 'nessuno'}`,
+        `Ingredienti mancanti: ${ingredientiMancanti.join(', ') || 'nessuno'}`,
+        '',
+        ricetta || "Ricetta non fornita dall'AI."
+      ].join('\n');
+
+      setDishDraft((d) => ({
+        ...d,
+        ingredients: combinedIngredients.join(', '),
+        recipe: recipeWithAvailability
+      }));
+      setStatus('Ingredienti e ricetta generati con AI.');
+    } catch (err) {
+      setStatus(`Errore generazione ricetta AI: ${err.message}`);
     }
   }
 
@@ -224,7 +272,8 @@ function App() {
                 <TextField label="Indirizzo" value={state.address} onChange={(e) => setState((s) => ({ ...s, address: e.target.value }))} />
                 <TextField label="Raggio km" type="number" value={state.radiusKm} onChange={(e) => setState((s) => ({ ...s, radiusKm: Number(e.target.value || 1) }))} />
                 <Button variant="contained" onClick={searchMarketsLive}>Cerca online</Button>
-                {state.marketsFound.map((m) => (
+                <TextField label="Filtro nome supermercato" value={marketNameFilter} onChange={(e) => setMarketNameFilter(e.target.value)} />
+                {filteredMarkets.map((m) => (
                   <Button key={m.id} variant={state.selectedMarkets.some((x) => x.id === m.id) ? 'contained' : 'outlined'} onClick={() => setState((s) => ({
                     ...s,
                     selectedMarkets: s.selectedMarkets.some((x) => x.id === m.id)
@@ -255,6 +304,7 @@ function App() {
                 <FormControl><InputLabel>Slot</InputLabel><Select value={dishDraft.mealType} label="Slot" onChange={(e) => setDishDraft({ ...dishDraft, mealType: e.target.value })}><MenuItem value="pranzo">Pranzo</MenuItem><MenuItem value="cena">Cena</MenuItem></Select></FormControl>
                 <TextField label="Ingredienti (virgola)" value={dishDraft.ingredients} onChange={(e) => setDishDraft({ ...dishDraft, ingredients: e.target.value })} />
                 <TextField label="Ricetta" multiline minRows={3} value={dishDraft.recipe} onChange={(e) => setDishDraft({ ...dishDraft, recipe: e.target.value })} />
+                <Button variant="outlined" onClick={generateDishDetailsWithAi} disabled={!aiEnabled}>Genera ingredienti + ricetta con AI</Button>
                 <Button variant="contained" onClick={() => {
                   if (!dishDraft.name || !dishDraft.date || !dishDraft.ingredients) return;
                   setState((s) => ({ ...s, dishes: [...s.dishes, {
