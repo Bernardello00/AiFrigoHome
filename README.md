@@ -6,9 +6,11 @@ Applicazione web in **React.js** con UI moderna Material UI, dati live online e 
 Il codice è stato diviso in sezioni/file per manutenzione semplice:
 - `app/config.js`: costanti globali e config default.
 - `app/utils.js`: utility (normalizzazione, distanza, riconoscimento catena).
-- `app/services.js`: servizi live (ricerca supermercati online, offerte online).
+- `app/services.js`: servizi live (ricerca supermercati online).
+- `app/offers-service.js`: ricerca supermercati filtrata + recupero offerte attive alla data.
+- `app/recipe-service.js`: orchestrazione AI ricetta strutturata + analisi ingredienti mancanti.
 - `app/gemini.js`: integrazione Gemini (check connessione + generateContent).
-- `app-react.js`: UI React e orchestrazione flussi.
+- `app-react.js`: UI React orientata al flusso supermercato → offerte → piatto → analisi.
 - `index.html`: bootstrap librerie + mount React.
 
 ## Avvio
