@@ -1,4 +1,9 @@
 window.OffersService = {
+  FEED_SOURCES: [
+    (query) => `https://r.jina.ai/http://news.google.com/rss/search?q=${query}&hl=it&gl=IT&ceid=IT:it`,
+    (query) => `https://r.jina.ai/http://www.bing.com/news/search?q=${query}&format=rss&setlang=it-IT`
+  ],
+
   parseDate(value) {
     if (!value) return null;
     if (value instanceof Date && !Number.isNaN(value.getTime())) return value;
@@ -80,11 +85,29 @@ window.OffersService = {
 
   async fetchOffersByBrand(chain, address) {
     const query = encodeURIComponent(`${chain} volantino offerte ${address}`);
-    const url = `https://r.jina.ai/http://news.google.com/rss/search?q=${query}&hl=it&gl=IT&ceid=IT:it`;
-    const res = await fetch(url, { headers: { Accept: 'application/xml,text/plain' } });
-    if (!res.ok) throw new Error('Feed offerte non disponibile');
-    const xml = await res.text();
-    const rawItems = this.parseRssItems(xml);
+    let rawItems = [];
+    let lastError = null;
+
+    for (const buildUrl of this.FEED_SOURCES) {
+      const url = buildUrl(query);
+      try {
+        const res = await fetch(url, { headers: { Accept: 'application/xml,text/plain' } });
+        if (!res.ok) throw new Error(`HTTP ${res.status}`);
+        const xml = await res.text();
+        const parsedItems = this.parseRssItems(xml);
+        if (parsedItems.length) {
+          rawItems = parsedItems;
+          break;
+        }
+      } catch (err) {
+        lastError = err;
+      }
+    }
+
+    if (!rawItems.length) {
+      if (lastError) console.warn('[OffersService] feed non disponibile', lastError);
+      return [];
+    }
 
     return rawItems.map((item) => {
       const pubDate = this.parseDate(item.pubDateRaw) || new Date();

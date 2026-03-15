@@ -1,10 +1,54 @@
 window.RecipeService = {
+  extractFirstJsonObject(text) {
+    const source = String(text || '');
+    const start = source.indexOf('{');
+    if (start === -1) return '';
+
+    let depth = 0;
+    let inString = false;
+    let escapeNext = false;
+
+    for (let i = start; i < source.length; i += 1) {
+      const char = source[i];
+
+      if (inString) {
+        if (escapeNext) {
+          escapeNext = false;
+        } else if (char === '\\') {
+          escapeNext = true;
+        } else if (char === '"') {
+          inString = false;
+        }
+        continue;
+      }
+
+      if (char === '"') {
+        inString = true;
+      } else if (char === '{') {
+        depth += 1;
+      } else if (char === '}') {
+        depth -= 1;
+        if (depth === 0) return source.slice(start, i + 1);
+      }
+    }
+
+    return '';
+  },
+
   safeJsonParse(payload) {
     const cleaned = String(payload || '').replace(/```json|```/gi, '').trim();
-    const start = cleaned.indexOf('{');
-    const end = cleaned.lastIndexOf('}');
-    if (start === -1 || end === -1 || end <= start) throw new Error('Risposta AI non in formato JSON valido.');
-    return JSON.parse(cleaned.slice(start, end + 1));
+    const jsonChunk = this.extractFirstJsonObject(cleaned);
+    if (!jsonChunk) throw new Error('Risposta AI non in formato JSON valido.');
+
+    try {
+      return JSON.parse(jsonChunk);
+    } catch {
+      const repaired = jsonChunk
+        .replace(/,\s*([}\]])/g, '$1')
+        .replace(/[“”]/g, '"')
+        .replace(/[‘’]/g, "'");
+      return JSON.parse(repaired);
+    }
   },
 
   validateRecipeSchema(data) {
@@ -24,7 +68,17 @@ window.RecipeService = {
   },
 
   async generateRecipeFromDishName(aiConfig, dishName) {
-    const prompt = `Sei uno chef preciso. Genera SOLO JSON valido, senza markdown, con schema:\n{"dishName":"string","ingredientsRequired":["string"],"recipeSteps":["string"],"servings":number,"optionalIngredients":["string"],"notes":"string"}.\n\nVincoli:\n- dishName deve essere '${dishName}'.\n- ingredientsRequired deve contenere ingredienti realistici e deduplicati.\n- recipeSteps deve essere una lista ordinata di passaggi sintetici.`;
+    const prompt = `Sei uno chef preciso. Rispondi ESCLUSIVAMENTE con un oggetto JSON valido (UTF-8), senza testo extra, senza markdown, senza blocchi \`\`\`.
+Schema richiesto:
+{"dishName":"string","ingredientsRequired":["string"],"recipeSteps":["string"],"servings":number,"optionalIngredients":["string"],"notes":"string"}
+
+Regole obbligatorie:
+- dishName deve essere esattamente "${dishName}".
+- ingredientsRequired: array non vuoto, ingredienti realistici, deduplicati.
+- recipeSteps: array non vuoto, passaggi sintetici e ordinati.
+- servings deve essere un numero.
+- Nessuna virgola finale in JSON.
+- Nessun commento o testo prima/dopo il JSON.`;
 
     const raw = await window.GeminiService.generate(aiConfig, prompt);
     const parsed = this.safeJsonParse(raw);
