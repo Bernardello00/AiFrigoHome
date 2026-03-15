@@ -1,79 +1,51 @@
-# AiFrigoHome (iOS)
+# AiFrigoHome React Live (Gemini)
 
-Applicazione iOS in **SwiftUI** per gestire il frigorifero di casa su due dispositivi e ricevere suggerimenti AI su ricette/consumo alimenti.
+Applicazione web in **React.js** con UI moderna Material UI, dati live online e integrazione **Gemini API (free tier)**.
 
-## Obiettivo
-- Tenere sincronizzata la lista alimenti su due iPhone/iPad.
-- Ridurre sprechi (scadenze, priorità uso ingredienti).
-- Ottenere consigli AI con gli ingredienti disponibili.
+## Struttura codice (più pulita)
+Il codice è stato diviso in sezioni/file per manutenzione semplice:
+- `app/config.js`: costanti globali e config default.
+- `app/utils.js`: utility (normalizzazione, distanza, riconoscimento catena).
+- `app/services.js`: servizi live (ricerca supermercati online, offerte online).
+- `app/gemini.js`: integrazione Gemini (check connessione + generateContent).
+- `app-react.js`: UI React e orchestrazione flussi.
+- `index.html`: bootstrap librerie + mount React.
 
-## Funzionalità implementate
-- Inserimento alimento con nome, quantità e data di scadenza.
-- Vista elenco alimenti ordinata per scadenza.
-- Evidenza visiva per alimenti in scadenza.
-- Notifiche locali per alimenti in scadenza (1 giorno prima).
-- Scanner barcode (VisionKit) per inserimento rapido.
-- Profilo famiglia/dieta (componenti, stile alimentare, allergie).
-- Suggerimento ricette AI personalizzato su ingredienti + profilo.
-- Sincronizzazione iCloud CloudKit di base (upload/download snapshot frigo).
+## Avvio
+```bash
+python3 -m http.server 5173
+```
+Apri `http://localhost:5173`.
 
-## Sincronizzazione tra 2 dispositivi iOS
-Per usare l'app su due dispositivi:
-1. Accedi con lo **stesso Apple ID** su entrambi.
-2. Abilita iCloud Drive.
-3. Nel progetto Xcode abilita il capability **iCloud / CloudKit**.
-4. Verifica il record type `FridgeSnapshot` nel container CloudKit privato.
-5. Usa i pulsanti "Invia su iCloud" e "Scarica da iCloud" nell'app.
+## Configurazione Gemini API (free)
+Nel pannello AI inserisci:
+- **Gemini API key**
+- Base URL (default: `https://generativelanguage.googleapis.com/v1beta`)
+- Modello (default: `gemini-1.5-flash`)
 
-## Permessi necessari
-- **Notifiche**: per avvisi di scadenza.
-- **Fotocamera**: per scansione barcode.
+### Come creare la key Gemini
+1. Vai su **Google AI Studio**.
+2. Accedi con il tuo account Google.
+3. Apri la sezione API keys.
+4. Crea una nuova key.
+5. Copia/incolla la key nel campo **Gemini API key** nell’app.
 
-Ricorda di impostare in `Info.plist`:
-- `NSCameraUsageDescription`
-- eventuali stringhe localizzate per spiegare l'uso.
+> Non salvare mai la key nel repository.
 
-## Integrazione AI
-`AIAdvisorService` usa endpoint compatibile OpenAI (`/chat/completions`) e legge:
-- `AI_API_KEY`
-- `AI_BASE_URL` (opzionale, default OpenAI)
-- `AI_MODEL` (opzionale, default `gpt-4o-mini`)
+## Check connessione AI (obbligatorio)
+- Usa il pulsante **Check connessione Gemini**.
+- L’app verifica la connessione reale via endpoint `GET /models`.
+- I pulsanti AI restano disabilitati finché:
+  - la configurazione non è completa;
+  - il check connessione non è OK.
 
-Per sviluppo locale puoi definire le variabili nello scheme di Xcode (Run > Arguments > Environment Variables).
+## Dati live online
+- Supermercati vicini: Nominatim + Overpass (OpenStreetMap).
+- Offerte: feed online per catena/zona (no lista statica hardcoded).
 
-## Struttura
-- `AiFrigoHome/AiFrigoHomeApp.swift`: entry point.
-- `AiFrigoHome/Models/FoodItem.swift`: modello alimento.
-- `AiFrigoHome/Models/UserProfile.swift`: profilo famiglia/dieta.
-- `AiFrigoHome/Services/FridgeStore.swift`: stato + persistenza locale + sync.
-- `AiFrigoHome/Services/AIAdvisorService.swift`: chiamate AI.
-- `AiFrigoHome/Services/NotificationService.swift`: notifiche scadenze.
-- `AiFrigoHome/Services/CloudKitSyncService.swift`: sync CloudKit.
-- `AiFrigoHome/Views/ContentView.swift`: dashboard principale.
-- `AiFrigoHome/Views/AddItemView.swift`: inserimento alimento + barcode.
-- `AiFrigoHome/Views/RecipeSuggestionView.swift`: suggerimenti AI.
-- `AiFrigoHome/Views/ProfileSettingsView.swift`: impostazioni famiglia/dieta.
-- `AiFrigoHome/Views/BarcodeScannerView.swift`: scanner barcode.
-
-## Versione Expo (test su iPhone con Expo Go)
-È stata aggiunta anche una versione React Native/Expo in `expo-app/` per test rapido su iPhone.
-
-### Avvio rapido
-1. Installa dipendenze:
-   - `cd expo-app && npm install`
-2. (Opzionale) crea `.env` in `expo-app/` con:
-   - `EXPO_PUBLIC_AI_API_KEY=...`
-   - `EXPO_PUBLIC_AI_BASE_URL=https://api.openai.com/v1`
-   - `EXPO_PUBLIC_AI_MODEL=gpt-4o-mini`
-3. Avvia:
-   - `npm run start`
-4. Apri l'app **Expo Go** su iPhone e scansiona il QR.
-
-### Feature incluse nella versione Expo
-- Lista alimenti con persistenza locale (`AsyncStorage`).
-- Profilo famiglia/dieta con persistenza locale.
-- Scanner barcode via `expo-camera`.
-- Notifiche locali scadenza via `expo-notifications`.
-- Suggerimenti AI tramite endpoint compatibile OpenAI.
-
-> Nota: la sync CloudKit è disponibile nella versione SwiftUI nativa; nella versione Expo il focus è test rapido su iPhone tramite Expo Go.
+## Feature
+- Gestione alimenti/scadenze.
+- Persone con preferiti/non graditi (popup).
+- Proposta piatti, votazioni e approvazione.
+- Calendario mese corrente con eventi pranzo/cena.
+- Gestione errore AI `429` con fallback informativo.
