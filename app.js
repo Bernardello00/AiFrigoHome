@@ -1,38 +1,5 @@
-const FOOD_TAGS = [
-  'Pasta', 'Riso', 'Pollo', 'Pesce', 'Legumi', 'Verdure', 'Frutta', 'Pizza', 'Insalata', 'Formaggi', 'Uova', 'Dolci'
-];
-
-const ZONE_MARKETS = {
-  'Genova Piazza Dante': [
-    { id: 'ge-ess-1', chain: 'Esselunga', store: 'Esselunga Genova', address: 'Via G. d’Annunzio 95', distance: 1.1 },
-    { id: 'ge-coop-1', chain: 'Coop', store: 'Coop Darsena', address: 'Via al Porto Antico 2', distance: 0.9 },
-    { id: 'ge-car-1', chain: 'Carrefour', store: 'Carrefour Express Centro', address: 'Via XX Settembre 45', distance: 0.6 },
-    { id: 'ge-con-1', chain: 'Conad', store: 'Conad City Sarzano', address: 'Piazza Sarzano 8R', distance: 1.4 }
-  ],
-  'Milano Duomo': [
-    { id: 'mi-ess-1', chain: 'Esselunga', store: 'Esselunga Porta Vittoria', address: 'Viale Umbria 66', distance: 1.8 },
-    { id: 'mi-car-1', chain: 'Carrefour', store: 'Carrefour Market Missori', address: 'Corso Italia 3', distance: 0.7 },
-    { id: 'mi-coop-1', chain: 'Coop', store: 'Coop Loreto', address: 'Piazzale Loreto 9', distance: 2.0 }
-  ],
-  'Torino Porta Nuova': [
-    { id: 'to-coop-1', chain: 'Coop', store: 'Coop Porta Nuova', address: 'Via Nizza 20', distance: 0.8 },
-    { id: 'to-con-1', chain: 'Conad', store: 'Conad City', address: 'Via Madama Cristina 14', distance: 1.1 },
-    { id: 'to-lid-1', chain: 'Lidl', store: 'Lidl San Salvario', address: 'Via Saluzzo 60', distance: 1.3 }
-  ]
-};
-
-const OFFERS_DB = {
-  'ge-ess-1': ['Pasta Garofalo 500g €0,89', 'Salmone affumicato -30%', 'Yogurt greco 2x1'],
-  'ge-coop-1': ['Tonno all’olio Coop €1,19', 'Banane bio -25%', 'Uova bio 6pz €1,89'],
-  'ge-car-1': ['Passata Mutti €0,99', 'Mozzarella fiordilatte -20%', 'Petto di pollo €8,90/kg'],
-  'ge-con-1': ['Riso Arborio -30%', 'Zucchine €1,49/kg', 'Parmigiano 24 mesi -20%'],
-  'mi-ess-1': ['Pane integrale -25%', 'Bresaola punta d’anca -20%'],
-  'mi-car-1': ['Sgombro in scatola 3x2', 'Insalata mista €0,99'],
-  'mi-coop-1': ['Fesa di tacchino -20%', 'Mela Golden €1,79/kg'],
-  'to-coop-1': ['Ceci in vetro €0,89', 'Ricotta fresca -25%'],
-  'to-con-1': ['Pasta integrale €0,79', 'Pomodori datterini -30%'],
-  'to-lid-1': ['Mozzarella light €0,79', 'Avena istantanea -20%']
-};
+const FOOD_TAGS = ['Pasta', 'Riso', 'Pollo', 'Pesce', 'Legumi', 'Verdure', 'Frutta', 'Pizza', 'Insalata', 'Formaggi', 'Uova', 'Dolci'];
+const DAY_NAMES = ['Lun', 'Mar', 'Mer', 'Gio', 'Ven', 'Sab', 'Dom'];
 
 const state = {
   items: JSON.parse(localStorage.getItem('items') || '[]'),
@@ -40,8 +7,9 @@ const state = {
   selectedMarkets: JSON.parse(localStorage.getItem('selectedMarkets') || '[]'),
   dishes: JSON.parse(localStorage.getItem('dishes') || '[]'),
   ai: JSON.parse(localStorage.getItem('ai') || '{}'),
-  zone: localStorage.getItem('zone') || 'Genova Piazza Dante',
-  maxDistance: Number(localStorage.getItem('maxDistance') || 2)
+  lastMarketsSearch: JSON.parse(localStorage.getItem('lastMarketsSearch') || '[]'),
+  address: localStorage.getItem('address') || 'Genova Piazza Dante',
+  radiusKm: Number(localStorage.getItem('radiusKm') || 2)
 };
 
 const $ = (id) => document.getElementById(id);
@@ -52,20 +20,29 @@ function save() {
   localStorage.setItem('selectedMarkets', JSON.stringify(state.selectedMarkets));
   localStorage.setItem('dishes', JSON.stringify(state.dishes));
   localStorage.setItem('ai', JSON.stringify(state.ai));
-  localStorage.setItem('zone', state.zone);
-  localStorage.setItem('maxDistance', String(state.maxDistance));
+  localStorage.setItem('lastMarketsSearch', JSON.stringify(state.lastMarketsSearch));
+  localStorage.setItem('address', state.address);
+  localStorage.setItem('radiusKm', String(state.radiusKm));
 }
 
 function daysTo(dateStr) {
   const d = new Date(dateStr);
-  const t = new Date();
+  const now = new Date();
   d.setHours(0, 0, 0, 0);
-  t.setHours(0, 0, 0, 0);
-  return Math.ceil((d - t) / 86400000);
+  now.setHours(0, 0, 0, 0);
+  return Math.ceil((d - now) / 86400000);
 }
 
-function normalize(s) {
-  return String(s || '').trim().toLowerCase();
+function normalize(v) {
+  return String(v || '').trim().toLowerCase();
+}
+
+function buildChecklist(targetId, values, name) {
+  $(targetId).innerHTML = values.map((value) => `<label><input type="checkbox" name="${name}" value="${value}" />${value}</label>`).join('');
+}
+
+function getChecked(name) {
+  return [...document.querySelectorAll(`input[name="${name}"]:checked`)].map((x) => x.value);
 }
 
 function approvedDishes() {
@@ -79,17 +56,8 @@ function approvedDishes() {
 
 function missingIngredientsForApproved() {
   const pantry = state.items.map((i) => normalize(i.name));
-  return [...new Set(approvedDishes().flatMap((d) => d.ingredients.filter((ing) => !pantry.includes(normalize(ing)))))];
-}
-
-function buildChecklist(targetId, list, name) {
-  $(targetId).innerHTML = list
-    .map((item) => `<label><input type="checkbox" name="${name}" value="${item}" />${item}</label>`)
-    .join('');
-}
-
-function getChecked(name) {
-  return [...document.querySelectorAll(`input[name="${name}"]:checked`)].map((el) => el.value);
+  const missing = approvedDishes().flatMap((d) => d.ingredients.filter((i) => !pantry.includes(normalize(i))));
+  return [...new Set(missing)];
 }
 
 function renderKpi() {
@@ -103,32 +71,36 @@ function renderKpi() {
 }
 
 function renderItems() {
-  const el = $('itemsList');
-  el.innerHTML = '';
+  const list = $('itemsList');
+  list.innerHTML = '';
   const ordered = [...state.items].sort((a, b) => a.expiry.localeCompare(b.expiry));
+
   if (!ordered.length) {
-    el.innerHTML = '<li class="meta">Nessun alimento inserito.</li>';
+    list.innerHTML = '<li class="meta">Nessun alimento inserito.</li>';
     return;
   }
+
   for (const item of ordered) {
     const d = daysTo(item.expiry);
     const cls = d < 0 ? 'expired' : d <= 2 ? 'warning' : '';
-    const tag = d < 0 ? 'Scaduto' : d === 0 ? 'Scade oggi' : `Scade tra ${d} giorni`;
+    const label = d < 0 ? 'Scaduto' : d === 0 ? 'Scade oggi' : `Scade tra ${d} giorni`;
     const li = document.createElement('li');
     li.className = `item ${cls}`;
-    li.innerHTML = `<div><strong>${item.name}</strong><div class="meta">${item.quantity} · ${tag}</div></div><button data-item-id="${item.id}" class="ghost">Elimina</button>`;
-    el.appendChild(li);
+    li.innerHTML = `<div><strong>${item.name}</strong><div class="meta">${item.quantity} · ${label}</div></div><button class="btn secondary" data-item-id="${item.id}">Elimina</button>`;
+    list.appendChild(li);
   }
 }
 
 function renderPeople() {
   const list = $('peopleList');
   list.innerHTML = '';
+
   if (!state.people.length) {
     list.innerHTML = '<li class="meta">Nessuna persona inserita.</li>';
     $('voterSelect').innerHTML = '<option value="">Aggiungi una persona</option>';
     return;
   }
+
   $('voterSelect').innerHTML = state.people.map((p) => `<option value="${p.id}">${p.name}</option>`).join('');
   for (const p of state.people) {
     const li = document.createElement('li');
@@ -141,66 +113,84 @@ function renderPeople() {
         <div class="meta">Non graditi: ${p.dislikes.length ? p.dislikes.join(', ') : '-'}</div>
         <div class="meta">Note: ${p.notes || '-'}</div>
       </div>
-      <button data-person-id="${p.id}" class="ghost">Rimuovi</button>
+      <button class="btn secondary" data-person-id="${p.id}">Rimuovi</button>
     `;
     list.appendChild(li);
   }
 }
 
-function getMarketsInRange() {
-  const list = ZONE_MARKETS[state.zone] || [];
-  return list.filter((m) => Number(m.distance) <= Number(state.maxDistance));
-}
+function renderLiveMarkets() {
+  const wrap = $('liveMarkets');
+  wrap.innerHTML = '';
 
-function renderZoneResults() {
-  const container = $('zoneResult');
-  const inRange = getMarketsInRange();
-  if (!inRange.length) {
-    container.innerHTML = '<div class="meta">Nessun supermercato trovato nel raggio indicato.</div>';
+  if (!state.lastMarketsSearch.length) {
+    wrap.innerHTML = '<div class="meta">Nessuna ricerca ancora eseguita.</div>';
     return;
   }
-  container.innerHTML = inRange.map((m) => {
-    const checked = state.selectedMarkets.some((s) => s.id === m.id) ? 'checked' : '';
-    return `<label class="market-row"><span><strong>${m.chain}</strong> · ${m.store}<br><small class="meta">${m.address} · ${m.distance} km</small></span><input type="checkbox" data-market-id="${m.id}" ${checked}></label>`;
-  }).join('');
+
+  for (const m of state.lastMarketsSearch) {
+    const checked = state.selectedMarkets.some((x) => x.id === m.id) ? 'checked' : '';
+    const row = document.createElement('label');
+    row.className = 'market-row';
+    row.innerHTML = `<span><strong>${m.chain}</strong> · ${m.name}<br><small class="meta">${m.address || 'Indirizzo non disponibile'} · ${m.distanceKm.toFixed(2)} km</small></span><input type="checkbox" data-market-id="${m.id}" ${checked} />`;
+    wrap.appendChild(row);
+  }
 }
 
 function renderSelectedMarkets() {
   const list = $('marketsList');
   list.innerHTML = '';
   if (!state.selectedMarkets.length) {
-    list.innerHTML = '<li class="meta">Nessun supermercato preferito selezionato.</li>';
+    list.innerHTML = '<li class="meta">Nessun supermercato preferito.</li>';
     return;
   }
-  for (const market of state.selectedMarkets) {
+  for (const m of state.selectedMarkets) {
     const li = document.createElement('li');
-    li.innerHTML = `${market.chain} (${market.distance} km) <button data-remove-market-id="${market.id}">×</button>`;
+    li.innerHTML = `${m.chain} (${m.distanceKm.toFixed(2)} km) <button data-remove-market-id="${m.id}">×</button>`;
     list.appendChild(li);
   }
 }
 
-function renderOffers() {
+async function fetchOnlineOffersForMarket(market, address) {
+  const query = encodeURIComponent(`${market.chain} offerte volantino ${address}`);
+  const rssUrl = `https://news.google.com/rss/search?q=${query}&hl=it&gl=IT&ceid=IT:it`;
+  const proxy = `https://r.jina.ai/http://news.google.com/rss/search?q=${query}&hl=it&gl=IT&ceid=IT:it`;
+
+  try {
+    const res = await fetch(proxy, { headers: { Accept: 'text/plain' } });
+    if (!res.ok) throw new Error('rss proxy fail');
+    const txt = await res.text();
+    const lines = txt.split('\n').filter((line) => line.includes('<title>') && !line.includes('Google News'));
+    const parsed = lines.slice(0, 3).map((line) => line.replace(/<[^>]+>/g, '').trim()).filter(Boolean);
+    return parsed.length ? parsed : [`Nessuna offerta trovata online per ${market.chain}.`];
+  } catch {
+    return [`Feed online non raggiungibile ora (${rssUrl}).`];
+  }
+}
+
+async function renderOffers() {
   const list = $('offersList');
-  list.innerHTML = '';
-  const missing = missingIngredientsForApproved();
+  list.innerHTML = '<li class="meta">Caricamento offerte online…</li>';
 
   if (!state.selectedMarkets.length) {
-    list.innerHTML = '<li class="meta">Seleziona i supermercati preferiti per vedere le offerte disponibili.</li>';
+    list.innerHTML = '<li class="meta">Seleziona almeno un supermercato dai risultati online.</li>';
     return;
   }
 
+  list.innerHTML = '';
+  const missing = missingIngredientsForApproved();
   if (missing.length) {
-    const li = document.createElement('li');
-    li.className = 'offer';
-    li.innerHTML = `<strong>Ingredienti mancanti per i piatti approvati</strong><div class="meta">${missing.join(', ')}</div>`;
-    list.appendChild(li);
+    const miss = document.createElement('li');
+    miss.className = 'offer';
+    miss.innerHTML = `<strong>Ingredienti mancanti (piatti approvati)</strong><div class="meta">${missing.join(', ')}</div>`;
+    list.appendChild(miss);
   }
 
-  for (const market of state.selectedMarkets.sort((a, b) => a.distance - b.distance)) {
-    const offers = OFFERS_DB[market.id] || ['Nessuna promo disponibile in questo momento'];
+  for (const market of [...state.selectedMarkets].sort((a, b) => a.distanceKm - b.distanceKm)) {
+    const offers = await fetchOnlineOffersForMarket(market, state.address);
     const li = document.createElement('li');
     li.className = 'offer';
-    li.innerHTML = `<strong>${market.chain} · ${market.store}</strong><div class="meta">${market.distance} km · ${market.address}</div><div class="meta">${offers.join(' · ')}</div>`;
+    li.innerHTML = `<strong>${market.chain} · ${market.name}</strong><div class="meta">${market.distanceKm.toFixed(2)} km · ${market.address || '-'}</div><div class="meta">${offers.join(' · ')}</div>`;
     list.appendChild(li);
   }
 }
@@ -218,7 +208,9 @@ function renderDishes() {
     list.innerHTML = '<li class="meta">Nessun piatto proposto.</li>';
     return;
   }
-  for (const dish of [...state.dishes].sort((a, b) => `${a.date}${a.mealType}`.localeCompare(`${b.date}${b.mealType}`))) {
+
+  const ordered = [...state.dishes].sort((a, b) => `${a.date}${a.mealType}`.localeCompare(`${b.date}${b.mealType}`));
+  for (const dish of ordered) {
     const votes = Object.values(dish.votes || {});
     const yes = votes.filter((v) => v === 'yes').length;
     const no = votes.filter((v) => v === 'no').length;
@@ -232,12 +224,12 @@ function renderDishes() {
       <div class="meta">${dish.date} · ${dish.mealType.toUpperCase()} · Voti sì/no: ${yes}/${no}</div>
       <span class="badge ${approved ? 'ok' : 'pending'}">${approved ? 'Approvato' : 'In votazione'}</span>
       <div class="vote-actions">
-        <button data-dish-id="${dish.id}" data-vote="yes" class="yes">Voto Sì</button>
-        <button data-dish-id="${dish.id}" data-vote="no" class="no">Voto No</button>
-        <button data-detail-id="${dish.id}" class="ghost">Dettagli</button>
-        <button data-remove-dish-id="${dish.id}" class="ghost">Elimina</button>
+        <button class="btn yes" data-dish-id="${dish.id}" data-vote="yes">Voto Sì</button>
+        <button class="btn no" data-dish-id="${dish.id}" data-vote="no">Voto No</button>
+        <button class="btn secondary" data-detail-id="${dish.id}">Dettagli</button>
+        <button class="btn secondary" data-remove-dish-id="${dish.id}">Elimina</button>
       </div>
-      <div id="detail-${dish.id}" class="details-box" hidden>
+      <div class="details-box" id="detail-${dish.id}" hidden>
         <div class="meta"><strong>Ingredienti:</strong> ${dish.ingredients.join(', ')}</div>
         <div class="meta"><strong>Disponibilità:</strong> ${coverage.allPresent ? 'Tutti presenti' : `Mancano: ${coverage.missing.join(', ')}`}</div>
         <div class="meta"><strong>Ricetta:</strong> ${dish.recipe || 'Non inserita'}</div>
@@ -247,40 +239,135 @@ function renderDishes() {
   }
 }
 
-function renderCalendar() {
-  const list = $('calendarList');
-  list.innerHTML = '';
+function renderMonthCalendar() {
+  const now = new Date();
+  const year = now.getFullYear();
+  const month = now.getMonth();
+  const monthName = now.toLocaleString('it-IT', { month: 'long', year: 'numeric' });
+  $('calendarTitle').textContent = `Calendario ${monthName}`;
+
+  const grid = $('calendarGrid');
+  grid.innerHTML = '';
+
+  for (const day of DAY_NAMES) {
+    const hd = document.createElement('div');
+    hd.className = 'cal-head';
+    hd.textContent = day;
+    grid.appendChild(hd);
+  }
+
+  const first = new Date(year, month, 1);
+  let firstWeekday = first.getDay();
+  firstWeekday = firstWeekday === 0 ? 7 : firstWeekday;
+
+  const daysInMonth = new Date(year, month + 1, 0).getDate();
   const approved = approvedDishes();
-  if (!approved.length) {
-    list.innerHTML = '<li class="meta">Nessun piatto approvato nel calendario.</li>';
-    return;
+
+  for (let i = 1; i < firstWeekday; i += 1) {
+    const empty = document.createElement('div');
+    empty.className = 'cal-day';
+    grid.appendChild(empty);
   }
-  const grouped = {};
-  for (const d of approved) {
-    if (!grouped[d.date]) grouped[d.date] = { pranzo: null, cena: null };
-    grouped[d.date][d.mealType] = d;
+
+  for (let day = 1; day <= daysInMonth; day += 1) {
+    const date = new Date(year, month, day);
+    const dateKey = date.toISOString().slice(0, 10);
+    const events = approved.filter((d) => d.date === dateKey);
+
+    const box = document.createElement('div');
+    box.className = 'cal-day';
+    box.innerHTML = `<div class="num">${day}</div>`;
+
+    for (const ev of events) {
+      const e = document.createElement('div');
+      e.className = `event ${ev.mealType === 'pranzo' ? 'lunch' : 'dinner'}`;
+      e.textContent = `${ev.mealType === 'pranzo' ? 'Pranzo' : 'Cena'}: ${ev.name}`;
+      box.appendChild(e);
+    }
+
+    grid.appendChild(box);
   }
-  for (const date of Object.keys(grouped).sort()) {
-    const slot = grouped[date];
-    const li = document.createElement('li');
-    li.className = 'calendar-slot';
-    li.innerHTML = `<strong>${date}</strong><div class="meta">Pranzo: ${slot.pranzo ? slot.pranzo.name : '-'}</div><div class="meta">Cena: ${slot.cena ? slot.cena.name : '-'}</div>`;
-    list.appendChild(li);
-  }
+}
+
+async function geocodeAddress(address) {
+  const url = `https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(address)}&limit=1`;
+  const res = await fetch(url, { headers: { Accept: 'application/json' } });
+  if (!res.ok) throw new Error('Geocoding non disponibile');
+  const data = await res.json();
+  if (!data?.length) throw new Error('Indirizzo non trovato');
+  return { lat: Number(data[0].lat), lon: Number(data[0].lon) };
+}
+
+function distanceKm(lat1, lon1, lat2, lon2) {
+  const toRad = (v) => (v * Math.PI) / 180;
+  const R = 6371;
+  const dLat = toRad(lat2 - lat1);
+  const dLon = toRad(lon2 - lon1);
+  const a = Math.sin(dLat / 2) ** 2 + Math.cos(toRad(lat1)) * Math.cos(toRad(lat2)) * Math.sin(dLon / 2) ** 2;
+  return 2 * R * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
+}
+
+function mapChain(name) {
+  const n = normalize(name);
+  if (n.includes('esselunga')) return 'Esselunga';
+  if (n.includes('coop')) return 'Coop';
+  if (n.includes('conad')) return 'Conad';
+  if (n.includes('carrefour')) return 'Carrefour';
+  if (n.includes('lidl')) return 'Lidl';
+  if (n.includes('md')) return 'MD';
+  if (n.includes('pam')) return 'Pam';
+  return 'Supermercato';
+}
+
+async function searchLiveSupermarkets(address, radiusKm) {
+  const center = await geocodeAddress(address);
+  const radiusM = Math.floor(Number(radiusKm) * 1000);
+  const overpassQuery = `[out:json][timeout:25];(node["shop"="supermarket"](around:${radiusM},${center.lat},${center.lon});way["shop"="supermarket"](around:${radiusM},${center.lat},${center.lon}););out center tags;`;
+  const res = await fetch('https://overpass-api.de/api/interpreter', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+    body: `data=${encodeURIComponent(overpassQuery)}`
+  });
+  if (!res.ok) throw new Error('Ricerca supermercati non disponibile');
+  const data = await res.json();
+
+  const raw = (data.elements || []).map((el) => {
+    const lat = el.lat ?? el.center?.lat;
+    const lon = el.lon ?? el.center?.lon;
+    if (!lat || !lon) return null;
+    const name = el.tags?.name || 'Supermercato';
+    const addressParts = [el.tags?.['addr:street'], el.tags?.['addr:housenumber'], el.tags?.['addr:city']].filter(Boolean);
+    return {
+      id: `osm-${el.type}-${el.id}`,
+      chain: mapChain(name),
+      name,
+      address: addressParts.join(' ') || '',
+      lat,
+      lon,
+      distanceKm: distanceKm(center.lat, center.lon, lat, lon)
+    };
+  }).filter(Boolean);
+
+  return raw.sort((a, b) => a.distanceKm - b.distanceKm).slice(0, 25);
 }
 
 function scheduleExpiryNotice() {
   if (!('Notification' in window) || Notification.permission !== 'granted') return;
-  const soon = state.items.filter((it) => {
-    const d = daysTo(it.expiry);
+  const soon = state.items.filter((i) => {
+    const d = daysTo(i.expiry);
     return d >= 0 && d <= 1;
   });
-  if (soon.length) new Notification('AiFrigoHome', { body: `Hai ${soon.length} alimento/i in scadenza entro 24h.` });
+  if (soon.length) new Notification('AiFrigoHome', { body: `Hai ${soon.length} alimento/i in scadenza entro 24 ore.` });
 }
 
 $('itemForm').addEventListener('submit', (e) => {
   e.preventDefault();
-  state.items.push({ id: crypto.randomUUID(), name: $('name').value.trim(), quantity: $('quantity').value.trim(), expiry: $('expiry').value });
+  state.items.push({
+    id: crypto.randomUUID(),
+    name: $('name').value.trim(),
+    quantity: $('quantity').value.trim(),
+    expiry: $('expiry').value
+  });
   $('itemForm').reset();
   save();
   renderAll();
@@ -305,9 +392,9 @@ $('personForm').addEventListener('submit', (e) => {
     id: crypto.randomUUID(),
     name: $('personName').value.trim(),
     age: $('personAge').value.trim(),
+    notes: $('personNotes').value.trim(),
     likes: getChecked('likes'),
-    dislikes: getChecked('dislikes'),
-    notes: $('personNotes').value.trim()
+    dislikes: getChecked('dislikes')
   });
   $('personForm').reset();
   buildChecklist('likesChecklist', FOOD_TAGS, 'likes');
@@ -321,47 +408,67 @@ $('peopleList').addEventListener('click', (e) => {
   const id = e.target.dataset.personId;
   if (!id) return;
   state.people = state.people.filter((p) => p.id !== id);
-  state.dishes.forEach((d) => { if (d.votes) delete d.votes[id]; });
-  save();
-  renderAll();
-});
-
-$('zoneForm').addEventListener('submit', (e) => {
-  e.preventDefault();
-  state.zone = $('zoneSelect').value;
-  state.maxDistance = Number($('maxDistance').value || 2);
-  const visible = getMarketsInRange().map((m) => m.id);
-  state.selectedMarkets = state.selectedMarkets.filter((m) => visible.includes(m.id));
-  save();
-  renderAll();
-});
-
-$('zoneResult').addEventListener('change', (e) => {
-  const marketId = e.target.dataset.marketId;
-  if (!marketId) return;
-  const found = (ZONE_MARKETS[state.zone] || []).find((m) => m.id === marketId);
-  if (!found) return;
-  if (e.target.checked) {
-    if (!state.selectedMarkets.some((m) => m.id === marketId)) state.selectedMarkets.push(found);
-  } else {
-    state.selectedMarkets = state.selectedMarkets.filter((m) => m.id !== marketId);
+  for (const d of state.dishes) {
+    if (d.votes) delete d.votes[id];
   }
   save();
-  renderSelectedMarkets();
-  renderOffers();
+  renderAll();
 });
 
-$('marketsList').addEventListener('click', (e) => {
+$('liveSearchForm').addEventListener('submit', async (e) => {
+  e.preventDefault();
+  const address = $('addressInput').value.trim();
+  const radiusKm = Number($('radiusKm').value || 2);
+  $('searchStatus').textContent = 'Ricerca live in corso...';
+
+  try {
+    const markets = await searchLiveSupermarkets(address, radiusKm);
+    state.address = address;
+    state.radiusKm = radiusKm;
+    state.lastMarketsSearch = markets;
+
+    const valid = new Set(markets.map((m) => m.id));
+    state.selectedMarkets = state.selectedMarkets.filter((m) => valid.has(m.id));
+
+    save();
+    $('searchStatus').textContent = `${markets.length} supermercati trovati online.`;
+    renderLiveMarkets();
+    renderSelectedMarkets();
+    await renderOffers();
+  } catch (err) {
+    $('searchStatus').textContent = `Errore ricerca online: ${err.message}`;
+  }
+});
+
+$('liveMarkets').addEventListener('change', async (e) => {
+  const id = e.target.dataset.marketId;
+  if (!id) return;
+  const found = state.lastMarketsSearch.find((m) => m.id === id);
+  if (!found) return;
+
+  if (e.target.checked) {
+    if (!state.selectedMarkets.some((m) => m.id === id)) state.selectedMarkets.push(found);
+  } else {
+    state.selectedMarkets = state.selectedMarkets.filter((m) => m.id !== id);
+  }
+
+  save();
+  renderSelectedMarkets();
+  await renderOffers();
+});
+
+$('marketsList').addEventListener('click', async (e) => {
   const id = e.target.dataset.removeMarketId;
   if (!id) return;
   state.selectedMarkets = state.selectedMarkets.filter((m) => m.id !== id);
   save();
   renderAll();
+  await renderOffers();
 });
 
-$('refreshOffersBtn').addEventListener('click', () => {
-  renderOffers();
-  $('aiOutput').textContent = 'Offerte aggiornate in base a zona, raggio e supermercati preferiti.';
+$('refreshOffersBtn').addEventListener('click', async () => {
+  await renderOffers();
+  $('aiOutput').textContent = 'Offerte online aggiornate.';
 });
 
 $('dishForm').addEventListener('submit', (e) => {
@@ -392,18 +499,20 @@ $('dishesList').addEventListener('click', (e) => {
     renderAll();
     return;
   }
+
   if (detailId) {
     const detail = document.getElementById(`detail-${detailId}`);
     if (detail) detail.hidden = !detail.hidden;
     return;
   }
-  if (!dishId || !vote) return;
 
+  if (!dishId || !vote) return;
   const voter = $('voterSelect').value;
   if (!voter) {
     $('aiOutput').textContent = 'Seleziona una persona votante.';
     return;
   }
+
   const dish = state.dishes.find((d) => d.id === dishId);
   if (!dish) return;
   dish.votes[voter] = vote;
@@ -423,31 +532,44 @@ $('aiForm').addEventListener('submit', (e) => {
 });
 
 $('aiBtn').addEventListener('click', async () => {
-  const nearest = [...state.selectedMarkets].sort((a, b) => a.distance - b.distance).slice(0, 3);
+  const nearest = [...state.selectedMarkets].sort((a, b) => a.distanceKm - b.distanceKm).slice(0, 5);
   const nearestText = nearest.length
-    ? nearest.map((m) => `${m.chain} ${m.store} (${m.distance} km)`).join('; ')
+    ? nearest.map((m) => `${m.chain} ${m.name} (${m.distanceKm.toFixed(2)} km)`).join('; ')
     : 'nessun supermercato selezionato';
-  const offersText = nearest.flatMap((m) => (OFFERS_DB[m.id] || []).map((o) => `${m.chain}: ${o}`)).join(' | ') || 'nessuna offerta';
-  const approvedText = approvedDishes().map((d) => `${d.name} ${d.date} ${d.mealType}`).join(' | ') || 'nessun piatto approvato';
-  const peopleText = state.people.map((p) => `${p.name}: preferiti ${p.likes.join(', ') || '-'}, non graditi ${p.dislikes.join(', ') || '-'}`).join(' | ') || 'nessuna persona';
+
+  let offersSummary = 'nessuna offerta online disponibile';
+  if (nearest.length) {
+    const chunks = [];
+    for (const m of nearest.slice(0, 2)) {
+      const offers = await fetchOnlineOffersForMarket(m, state.address);
+      chunks.push(`${m.chain}: ${offers.join(' | ')}`);
+    }
+    offersSummary = chunks.join(' || ');
+  }
+
+  const approved = approvedDishes().map((d) => `${d.name} (${d.date} ${d.mealType})`).join(' | ') || 'nessun piatto approvato';
+  const people = state.people.map((p) => `${p.name}: pref ${p.likes.join(', ') || '-'}; no ${p.dislikes.join(', ') || '-'}`).join(' | ') || 'nessuna persona';
 
   if (!state.ai.apiKey) {
-    $('aiOutput').textContent = `Fallback locale:\nZona: ${state.zone} (raggio ${state.maxDistance} km)\nSupermercati vicini: ${nearestText}\nOfferte: ${offersText}\nPiatti approvati: ${approvedText}\n\nSuggerimento: compra prima dai market sotto 1.2 km e copri gli ingredienti mancanti: ${missingIngredientsForApproved().join(', ') || 'nessuno'}.`;
+    $('aiOutput').textContent = `Fallback smart:\nZona: ${state.address}\nSupermercati vicini: ${nearestText}\nOfferte online: ${offersSummary}\nPiatti approvati: ${approved}\n\nSuggerimento: acquista prima ingredienti mancanti (${missingIngredientsForApproved().join(', ') || 'nessuno'}) nei market più vicini.`;
     return;
   }
 
-  $('aiOutput').textContent = 'Generazione consigli in corso...';
+  $('aiOutput').textContent = 'Generazione consigli AI in corso...';
   try {
     const res = await fetch(`${state.ai.baseUrl}/chat/completions`, {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${state.ai.apiKey}` },
+      headers: {
+        'Content-Type': 'application/json',
+        Authorization: `Bearer ${state.ai.apiKey}`
+      },
       body: JSON.stringify({
         model: state.ai.model,
         messages: [
-          { role: 'system', content: 'Sei un assistente per meal planning, offerte supermarket e risparmio.' },
+          { role: 'system', content: 'Sei un assistente meal planning e risparmio spesa basato su dati online aggiornati.' },
           {
             role: 'user',
-            content: `Zona: ${state.zone}. Supermercati vicini: ${nearestText}. Offerte disponibili: ${offersText}. Persone: ${peopleText}. Piatti approvati: ${approvedText}. Dammi piano acquisti + ricette ottimizzate ai preferiti.`
+            content: `Zona: ${state.address}. Supermercati: ${nearestText}. Offerte online: ${offersSummary}. Persone: ${people}. Piatti approvati: ${approved}. Dammi piano smart acquisti+menù.`
           }
         ],
         temperature: 0.6
@@ -455,15 +577,15 @@ $('aiBtn').addEventListener('click', async () => {
     });
 
     if (res.status === 429) {
-      $('aiOutput').textContent = `AI temporaneamente limitata (429).\nUso fallback locale:\n- Supermercati: ${nearestText}\n- Offerte: ${offersText}\n- Priorità acquisto: ${missingIngredientsForApproved().join(', ') || 'nessuna'}.\n\nSuggerimento: riprova tra poco o riduci la frequenza richieste.`;
+      $('aiOutput').textContent = `AI limitata (429). Uso fallback online locale:\nSupermercati: ${nearestText}\nOfferte: ${offersSummary}\nPriorità: ${missingIngredientsForApproved().join(', ') || 'nessuna'}.`;
       return;
     }
-    if (!res.ok) throw new Error(`Errore API (${res.status})`);
 
+    if (!res.ok) throw new Error(`Errore API (${res.status})`);
     const json = await res.json();
     $('aiOutput').textContent = json.choices?.[0]?.message?.content || 'Nessuna risposta.';
   } catch (err) {
-    $('aiOutput').textContent = `Errore AI: ${err.message}\nFallback: usa la sezione Offerte disponibili e i piatti approvati per comprare solo il necessario.`;
+    $('aiOutput').textContent = `Errore AI: ${err.message}\nUsa la sezione offerte online e i piatti approvati per la spesa smart.`;
   }
 });
 
@@ -477,8 +599,8 @@ $('notifyBtn').addEventListener('click', async () => {
 });
 
 function hydrate() {
-  $('zoneSelect').innerHTML = Object.keys(ZONE_MARKETS).map((z) => `<option ${z === state.zone ? 'selected' : ''}>${z}</option>`).join('');
-  $('maxDistance').value = state.maxDistance;
+  $('addressInput').value = state.address;
+  $('radiusKm').value = state.radiusKm;
   $('aiKey').value = state.ai.apiKey || '';
   $('aiBase').value = state.ai.baseUrl || 'https://api.openai.com/v1';
   $('aiModel').value = state.ai.model || 'gpt-4o-mini';
@@ -490,12 +612,12 @@ function renderAll() {
   renderKpi();
   renderItems();
   renderPeople();
-  renderZoneResults();
+  renderLiveMarkets();
   renderSelectedMarkets();
-  renderOffers();
   renderDishes();
-  renderCalendar();
+  renderMonthCalendar();
 }
 
 hydrate();
 renderAll();
+void renderOffers();

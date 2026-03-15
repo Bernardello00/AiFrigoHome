@@ -1,22 +1,14 @@
-# AiFrigoHome Smart Planner Web
+# AiFrigoHome Smart Live Web
 
-Web app responsive (desktop + mobile) per pianificare pasti in famiglia, votare i piatti e ottimizzare la spesa su supermercati vicini.
+Web app responsive per gestione frigo, pianificazione pasti e spesa con dati online aggiornati.
 
-## Cosa è stato migliorato
-- UI/UX semplificata e più moderna (dashboard con card, sezioni chiare, popup persona).
-- Profilo famiglia con **Aggiungi persona in popup** e checklist cibi preferiti/non graditi.
-- Niente barcode: rimosso per mantenere un flusso coerente e davvero utilizzabile.
-- Supermercati per **zona reale + raggio** (inclusa `Genova Piazza Dante`) con selezione preferiti.
-- Sezione offerte resa più chiara con promo per punto vendita e priorità ingredienti mancanti.
-- AI con gestione robusta del caso `429` (fallback locale automatico, senza bloccare l’uso).
-
-## Funzioni principali
-- Gestione frigo con scadenze.
-- Proposta piatti per pranzo/cena.
-- Votazione per persona (Sì/No).
-- Inserimento in calendario dei soli piatti approvati.
-- Dettaglio piatto con ingredienti, disponibilità in frigo e ricetta.
-- Suggerimenti AI contestuali (o fallback locale se API non disponibile).
+## Novità principali
+- UI/UX riprogettata con layout ordinato, spaziature coerenti e flussi più semplici.
+- Ricerca supermercati **live online** da indirizzo reale (Nominatim + Overpass OpenStreetMap).
+- Selezione supermercati preferiti tra i risultati reali nel raggio impostato.
+- Offerte lette da fonti online (feed news/volantini per catena + zona), non da liste statiche hardcoded.
+- Calendario visibile come **mese corrente** con eventi pranzo/cena dei piatti approvati.
+- Fallback AI robusto anche in caso di rate-limit `429`.
 
 ## Avvio
 ```bash
@@ -25,7 +17,12 @@ python3 -m http.server 5173
 Apri `http://localhost:5173`.
 
 ## Configurazione AI (opzionale)
-Nel pannello AI imposta:
+Nel pannello AI:
 - API Key
 - Base URL (default `https://api.openai.com/v1`)
 - Modello (default `gpt-4o-mini`)
+
+## Nota sui dati live
+- Supermercati: query live su OpenStreetMap (Nominatim + Overpass).
+- Offerte: recupero online da fonti news/volantini per catena/zona.
+- Se una fonte esterna non risponde (CORS/rate limit), l’app mostra messaggi di fallback senza bloccarsi.
