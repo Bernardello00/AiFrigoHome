@@ -1,0 +1,150 @@
+<!doctype html>
+<html lang="it">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>AiFrigoHome Smart Planner</title>
+    <link rel="stylesheet" href="styles.css" />
+  </head>
+  <body>
+    <header class="topbar glass">
+      <div>
+        <h1>AiFrigoHome</h1>
+        <p class="subtitle">Pasti, votazioni famiglia e offerte reali per zona</p>
+      </div>
+      <div class="header-actions">
+        <button id="notifyBtn" class="ghost">Notifiche</button>
+      </div>
+    </header>
+
+    <main class="dashboard">
+      <section class="kpi-grid">
+        <article class="kpi-card"><small>Alimenti</small><strong id="kpiItems">0</strong></article>
+        <article class="kpi-card"><small>In scadenza</small><strong id="kpiExpiring">0</strong></article>
+        <article class="kpi-card"><small>Persone</small><strong id="kpiPeople">0</strong></article>
+        <article class="kpi-card"><small>Piatti approvati</small><strong id="kpiApproved">0</strong></article>
+      </section>
+
+      <section class="panel">
+        <h2>Frigo</h2>
+        <form id="itemForm" class="form-grid">
+          <label>Nome<input id="name" required placeholder="Es. Latte" /></label>
+          <label>Quantità<input id="quantity" required placeholder="Es. 1L" /></label>
+          <label>Scadenza<input id="expiry" type="date" required /></label>
+          <button type="submit" class="full">Aggiungi alimento</button>
+        </form>
+      </section>
+
+      <section class="panel span-2">
+        <h2>Alimenti in casa</h2>
+        <ul id="itemsList" class="list"></ul>
+      </section>
+
+      <section class="panel span-2">
+        <div class="panel-head-row">
+          <h2>Persone in famiglia</h2>
+          <button id="openPersonModalBtn">+ Aggiungi persona</button>
+        </div>
+        <p class="hint">Ogni persona può votare i piatti e influenzare il menù.</p>
+        <ul id="peopleList" class="list"></ul>
+      </section>
+
+      <section class="panel">
+        <h2>Supermercati vicini</h2>
+        <form id="zoneForm" class="form-grid">
+          <label>Zona
+            <select id="zoneSelect"></select>
+          </label>
+          <label>Raggio massimo (km)
+            <input id="maxDistance" type="number" min="0.3" step="0.1" value="2" />
+          </label>
+          <button type="submit" class="full">Trova supermercati</button>
+        </form>
+        <div id="zoneResult" class="market-results"></div>
+        <p class="hint">Seleziona i preferiti dalla lista trovata.</p>
+        <ul id="marketsList" class="chips"></ul>
+      </section>
+
+      <section class="panel span-2">
+        <div class="panel-head-row">
+          <h2>Offerte disponibili</h2>
+          <button id="refreshOffersBtn">Aggiorna offerte</button>
+        </div>
+        <p class="hint">Goal: suggerirti promo utili e ingredienti mancanti per i piatti approvati.</p>
+        <ul id="offersList" class="list"></ul>
+      </section>
+
+      <section class="panel span-2">
+        <h2>Pianificazione pranzo/cena</h2>
+        <form id="dishForm" class="form-grid">
+          <label>Nome piatto<input id="dishName" required placeholder="Es. Pasta al pesto" /></label>
+          <label>Data<input id="dishDate" type="date" required /></label>
+          <label>Slot
+            <select id="dishMealType">
+              <option value="pranzo">Pranzo</option>
+              <option value="cena">Cena</option>
+            </select>
+          </label>
+          <label class="full">Ingredienti (virgola)<input id="dishIngredients" required placeholder="Es. Pasta, basilico, pinoli" /></label>
+          <label class="full">Ricetta<textarea id="dishRecipe" rows="3" placeholder="Passaggi principali"></textarea></label>
+          <button class="full" type="submit">Proponi piatto</button>
+        </form>
+
+        <div class="vote-row">
+          <label>Votante
+            <select id="voterSelect"></select>
+          </label>
+        </div>
+        <ul id="dishesList" class="list"></ul>
+      </section>
+
+      <section class="panel span-2">
+        <h2>Calendario menù</h2>
+        <ul id="calendarList" class="list"></ul>
+      </section>
+
+      <section class="panel span-2">
+        <div class="panel-head-row">
+          <h2>Consigli AI</h2>
+          <button id="aiBtn">Genera consigli</button>
+        </div>
+        <form id="aiForm" class="form-grid">
+          <label class="full">API Key<input id="aiKey" type="password" placeholder="sk-..." /></label>
+          <label>Base URL<input id="aiBase" placeholder="https://api.openai.com/v1" /></label>
+          <label>Modello<input id="aiModel" placeholder="gpt-4o-mini" /></label>
+          <button class="full" type="submit">Salva AI</button>
+        </form>
+        <pre id="aiOutput" class="output"></pre>
+      </section>
+    </main>
+
+    <dialog id="personModal" class="modal">
+      <form id="personForm" class="modal-card" method="dialog">
+        <div class="panel-head-row">
+          <h3>Aggiungi persona</h3>
+          <button type="button" id="closePersonModalBtn" class="ghost">✕</button>
+        </div>
+        <label>Nome<input id="personName" required placeholder="Es. Giada" /></label>
+        <label>Età<input id="personAge" type="number" min="0" placeholder="Es. 31" /></label>
+        <label>Note<input id="personNotes" placeholder="Es. Preferisce cene leggere" /></label>
+
+        <fieldset>
+          <legend>Cibi preferiti</legend>
+          <div id="likesChecklist" class="check-grid"></div>
+        </fieldset>
+
+        <fieldset>
+          <legend>Cibi non graditi</legend>
+          <div id="dislikesChecklist" class="check-grid"></div>
+        </fieldset>
+
+        <div class="modal-actions">
+          <button type="button" id="cancelPersonBtn" class="ghost">Annulla</button>
+          <button type="submit">Salva persona</button>
+        </div>
+      </form>
+    </dialog>
+
+    <script src="app.js"></script>
+  </body>
+</html>
